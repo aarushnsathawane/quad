@@ -4,9 +4,16 @@ import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
 import { CAMPUS } from "./data";
 import { C } from "./theme";
 import { Icon, Avatar } from "./ui";
+import { groupsFor, ungroupedPeople } from "./gatherings";
 import type { MapProps } from "./map-types";
-export default function CampusMap({ people, selected, onSelect }: MapProps) {
+export default function CampusMap({
+  people,
+  selected,
+  onSelect,
+  onGathering,
+}: MapProps) {
   const map = useRef<MapView>(null);
+  const groups = groupsFor(people);
   useEffect(() => {
     const p = people.find((x) => x.id === selected);
     if (p)
@@ -27,7 +34,7 @@ export default function CampusMap({ people, selected, onSelect }: MapProps) {
         showsPointsOfInterests={false}
         rotateEnabled={false}
       >
-        {people.map((p) => (
+        {ungroupedPeople(people, groups).map((p) => (
           <Marker
             key={p.id}
             coordinate={{ latitude: p.position.lat, longitude: p.position.lng }}
@@ -49,6 +56,51 @@ export default function CampusMap({ people, selected, onSelect }: MapProps) {
             </View>
           </Marker>
         ))}
+        {groups.map((g) => (
+          <Marker
+            key={g.id}
+            coordinate={{ latitude: g.position.lat, longitude: g.position.lng }}
+            title={g.title}
+            description={`${g.members.length} students · ${g.venue}`}
+            onPress={() => onGathering?.(g.id)}
+            tracksViewChanges={true}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: C.white,
+                borderRadius: 28,
+                padding: 5,
+                borderWidth: 2,
+                borderColor: C.accent,
+              }}
+            >
+              {g.members.slice(0, 2).map((p, i) => (
+                <View key={p.id} style={{ marginLeft: i ? -12 : 0 }}>
+                  <Avatar person={p} size={36} />
+                </View>
+              ))}
+              <View
+                style={{
+                  backgroundColor: C.green,
+                  width: 27,
+                  height: 27,
+                  borderRadius: 14,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginLeft: -6,
+                }}
+              >
+                <Text
+                  style={{ fontSize: 12, fontWeight: "700", color: C.white }}
+                >
+                  {g.members.length}
+                </Text>
+              </View>
+            </View>
+          </Marker>
+        ))}
       </MapView>
       <Pressable
         accessibilityRole="button"
@@ -58,9 +110,7 @@ export default function CampusMap({ people, selected, onSelect }: MapProps) {
       >
         <Icon name="locate" size={21} />
       </Pressable>
-      <Text style={styles.caption}>
-        Fictional students · Approximate positions
-      </Text>
+      <Text style={styles.caption}>Tap a group · Sample gatherings</Text>
     </View>
   );
 }

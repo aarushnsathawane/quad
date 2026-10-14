@@ -49,6 +49,24 @@ export function initialState(): State {
     },
     blocked: [],
     reports: [],
+    messages: {
+      sam: [
+        {
+          id: "sample-sam",
+          author: "them",
+          text: "Hey! Saw you’re in HackRU too. What are you working on?",
+          createdAt: Date.now(),
+        },
+      ],
+      noah: [
+        {
+          id: "sample-noah",
+          author: "them",
+          text: "Coffee at The Yard sometime? Would love to hear about your side project.",
+          createdAt: Date.now(),
+        },
+      ],
+    },
     visibility: { audience: "nobody", until: null, presenceUpdatedAt: null },
   };
 }

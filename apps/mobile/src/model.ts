@@ -42,6 +42,7 @@ export type State = {
   blocked: string[];
   reports: Report[];
   visibility: Visibility;
+  messages?: Record<string, Message[]>;
 };
 export const FRESHNESS_MS = 15 * 60 * 1000;
 export function connectionAction(
@@ -187,5 +188,62 @@ export function parseSavedState(raw: string): State {
   )
     throw new Error("Saved demo data could not be read.");
   validateProfile(s.me);
+  if (
+    s.messages !== undefined &&
+    (typeof s.messages !== "object" ||
+      s.messages === null ||
+      Array.isArray(s.messages) ||
+      Object.values(s.messages).some(
+        (thread) =>
+          !Array.isArray(thread) ||
+          thread.some(
+            (m) =>
+              !m ||
+              typeof m.id !== "string" ||
+              typeof m.text !== "string" ||
+              !["you", "them"].includes(m.author) ||
+              !Number.isFinite(m.createdAt),
+          ),
+      ))
+  )
+    throw new Error("Saved messages could not be read.");
   return s;
+}
+
+export type Message = {
+  id: string;
+  author: "you" | "them";
+  text: string;
+  createdAt: number;
+};
+export function addMessage(
+  state: State,
+  personId: string,
+  text: string,
+  now = Date.now(),
+): State {
+  if (
+    state.connections[personId] !== "connected" ||
+    state.blocked.includes(personId)
+  )
+    throw new Error("Messaging is available to accepted connections only.");
+  const body = text.trim();
+  if (!body || body.length > 1000)
+    throw new Error("Write a message of 1–1,000 characters.");
+  const thread = state.messages?.[personId] || [];
+  return {
+    ...state,
+    messages: {
+      ...state.messages,
+      [personId]: [
+        ...thread,
+        {
+          id: `${now}-${thread.length}`,
+          author: "you",
+          text: body,
+          createdAt: now,
+        },
+      ],
+    },
+  };
 }

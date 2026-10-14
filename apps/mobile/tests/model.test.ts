@@ -1,3 +1,5 @@
+import { addMessage } from "../src/model.ts";
+import { groupsFor, groupSummary, ungroupedPeople } from "../src/gatherings.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -153,4 +155,54 @@ test("serialization preserves independent saved data and detects invalid storage
   assert.throws(() =>
     parseSavedState(JSON.stringify({ ...s, connections: { sam: "invalid" } })),
   );
+});
+
+test("messages require an accepted, unblocked connection and survive saved-state reload", () => {
+  const s = addMessage(seed(), "sam", "  Coffee after class?  ", 1234);
+  assert.equal(s.messages?.sam[0].text, "Coffee after class?");
+  assert.equal(
+    parseSavedState(JSON.stringify(s)).messages?.sam[0].text,
+    "Coffee after class?",
+  );
+  assert.throws(() => addMessage(s, "maya", "Hi"));
+  assert.throws(() => addMessage(s, "jordan", "Hi"));
+  assert.throws(() => addMessage(blockPerson(s, "sam"), "sam", "Hi"));
+  assert.throws(() => addMessage(s, "sam", " "));
+  assert.throws(() => addMessage(s, "sam", "x".repeat(1001)));
+  assert.equal(parseSavedState(JSON.stringify(seed())).messages, undefined);
+  assert.throws(() =>
+    parseSavedState(
+      JSON.stringify({
+        ...s,
+        messages: {
+          sam: [{ id: "broken", text: "bad", author: "unknown", createdAt: 0 }],
+        },
+      }),
+    ),
+  );
+});
+
+test("gathering counts, names and individual pins respect filtered discovery", () => {
+  const people = ["maya", "sam", "daniel", "jordan"].map((id) => ({
+    ...person,
+    id,
+    firstName: id,
+  }));
+  const groups = groupsFor(people);
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].members.length, 3);
+  assert.equal(
+    groupSummary(groups[0]),
+    "maya, sam and 1 other are at HackRU build night",
+  );
+  assert.deepEqual(
+    ungroupedPeople(people, groups).map((p) => p.id),
+    ["jordan"],
+  );
+  const blocked = blockPerson(seed(), "sam");
+  const visible = people.filter((p) => canDiscover(blocked, p.id));
+  const reduced = groupsFor(visible);
+  assert.equal(reduced[0].members.length, 2);
+  assert.ok(!groupSummary(reduced[0]).includes("sam"));
+  assert.equal(groupsFor(visible.filter((p) => p.id === "maya")).length, 0);
 });

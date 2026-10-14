@@ -16,6 +16,9 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import CampusMap from "./src/CampusMap";
+import Chat from "./src/Chat";
+import { groupsFor, groupSummary } from "./src/gatherings";
+import { addMessage } from "./src/model";
 import { CATALOG, PEOPLE, initialState } from "./src/data";
 import {
   blockPerson,
@@ -43,6 +46,8 @@ type Dialog =
   | "report"
   | "block"
   | "disconnect"
+  | "chat"
+  | "gathering"
   | "about"
   | null;
 type Filter = "everyone" | "interests" | "clubs" | "connections";
@@ -63,6 +68,7 @@ function Quad() {
   const [tab, setTab] = useState<Tab>("map"),
     [dialog, setDialog] = useState<Dialog>(null),
     [selected, setSelected] = useState<string | null>(null),
+    [gatheringId, setGatheringId] = useState<string | null>(null),
     [subject, setSubject] = useState<string | null>(null),
     [filter, setFilter] = useState<Filter>("everyone"),
     [search, setSearch] = useState(""),
@@ -157,6 +163,17 @@ function Quad() {
         ),
     [discoverable, search, filter, state.me, state.connections],
   );
+  const gatherings = groupsFor(people);
+  const gathering = gatherings.find((g) => g.id === gatheringId);
+  const openGathering = (id: string) => {
+    setSelected(null);
+    setGatheringId(id);
+    setDialog("gathering");
+  };
+  const openChat = (p: Person) => {
+    setSubject(p.id);
+    setDialog("chat");
+  };
   const current = people.find((p) => p.id === selected);
   const person = PEOPLE.find((p) => p.id === subject);
   const received = discoverable.filter(
@@ -364,6 +381,7 @@ function Quad() {
                       people={people}
                       selected={selected}
                       onSelect={setSelected}
+                      onGathering={openGathering}
                     />
                     <View pointerEvents="none" style={styles.mapLabel}>
                       <Icon name="profile" size={19} />
@@ -537,6 +555,15 @@ function Quad() {
                           text={similarity(state.me, p, state.connections)}
                         />
                         {connectionButton(p)}
+                        {state.connections[p.id] === "connected" && (
+                          <Button
+                            secondary
+                            icon="arrow"
+                            onPress={() => openChat(p)}
+                          >
+                            Message {p.firstName}
+                          </Button>
+                        )}
                         {connectionTab === "incoming" && (
                           <Pressable
                             accessibilityRole="button"
@@ -652,27 +679,88 @@ function Quad() {
       <Sheet
         open={dialog !== null}
         title={
-          dialog === "profile"
-            ? "A little introduction"
-            : dialog === "edit"
-              ? "Make it feel like you."
-              : dialog === "visibility"
-                ? "Your location. Your call."
-                : dialog === "report"
-                  ? "Report privately"
-                  : dialog === "block"
-                    ? "Block this person?"
-                    : dialog === "disconnect"
-                      ? "Remove connection?"
-                      : "Your campus. Your people."
+          dialog === "chat"
+            ? `Chat with ${person?.firstName || "a connection"}`
+            : dialog === "gathering"
+              ? "A few people, a good reason to go."
+              : dialog === "profile"
+                ? "A little introduction"
+                : dialog === "edit"
+                  ? "Make it feel like you."
+                  : dialog === "visibility"
+                    ? "Your location. Your call."
+                    : dialog === "report"
+                      ? "Report privately"
+                      : dialog === "block"
+                        ? "Block this person?"
+                        : dialog === "disconnect"
+                          ? "Remove connection?"
+                          : "Your campus. Your people."
         }
         onClose={() => setDialog(null)}
       >
+        {dialog === "chat" &&
+          person &&
+          state.connections[person.id] === "connected" &&
+          !state.blocked.includes(person.id) && (
+            <Chat
+              person={person}
+              messages={state.messages?.[person.id] || []}
+              saving={saving}
+              onSend={(text) => update((s) => addMessage(s, person.id, text))}
+            />
+          )}
+        {dialog === "gathering" && gathering && (
+          <>
+            <Label>Sample campus gathering</Label>
+            <Text style={styles.smallTitle}>{gathering.title}</Text>
+            <Text style={styles.clubText}>{gathering.venue}</Text>
+            <Reason text={groupSummary(gathering)} />
+            <Text style={styles.bodyCopy}>{gathering.description}</Text>
+            <View style={styles.chipRow}>
+              {gathering.interests.map((i) => (
+                <Chip key={i} selected={state.me.interests.includes(i)}>
+                  {i}
+                </Chip>
+              ))}
+            </View>
+            <Text style={styles.finePrint}>
+              Fictional, explicitly assigned attendees. A location never implies
+              attendance. Counts respect your filters and blocks.
+            </Text>
+            <Text style={styles.sectionTitle}>
+              Who’s here · {gathering.members.length}
+            </Text>
+            {gathering.members.map((p) => (
+              <Pressable
+                key={p.id}
+                accessibilityRole="button"
+                accessibilityLabel={`View ${p.firstName} from gathering`}
+                onPress={() => showPerson(p)}
+                style={styles.cardTop}
+              >
+                <Avatar person={p} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.personName}>
+                    {p.firstName} {p.lastName}
+                  </Text>
+                  <Text style={styles.personMeta}>{p.major}</Text>
+                </View>
+                <Icon name="arrow" size={17} />
+              </Pressable>
+            ))}
+          </>
+        )}
         {dialog === "profile" && person && canDiscover(state, person.id) && (
           <>
             <ProfileContent profile={person} />
             <Reason text={similarity(state.me, person, state.connections)} />
             {connectionButton(person)}
+            {state.connections[person.id] === "connected" && (
+              <Button icon="arrow" onPress={() => openChat(person)}>
+                Message {person.firstName}
+              </Button>
+            )}
             <View style={styles.actions}>
               <Button secondary icon="flag" onPress={() => setDialog("report")}>
                 Report
@@ -813,7 +901,9 @@ function Quad() {
             </Text>
             <Text style={styles.bodyCopy}>
               Find a reason to say hello through shared clubs, interests,
-              majors, and mutual connections.
+              majors, and mutual connections. Tap groups on the map to find
+              sample campus gatherings. Accepted connections can open a local
+              demo chat.
             </Text>
             <View style={styles.notice}>
               <Icon name="info" size={20} />
