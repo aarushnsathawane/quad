@@ -6,7 +6,19 @@ This repository contains a runnable **local MVP demo** for Rutgers University. E
 
 > This is a functional prototype, not a campus-ready production service. University verification and the signed-in user are simulated. All map profiles are fictional; the illustrated campus map is not a geographic basemap. Do not deploy this demo server publicly or use it to collect real student data.
 
-## Run locally
+## Mobile app
+
+The React Native + Expo mobile demo now lives in [`apps/mobile`](apps/mobile/README.md). It has native iOS/Android maps, the same core discovery flows, and independent device-local saved data.
+
+```sh
+cd apps/mobile
+npm ci
+npm start
+```
+
+Scan Expo’s QR code with Expo Go on a phone on the same Wi-Fi. Use `npm run web` in that folder for the browser preview. See the mobile README for SDK compatibility, validation, and demo boundaries.
+
+## Run the original web app locally
 
 Requires **Node.js 22.13+** and npm. Node 22's built-in SQLite module may print an experimental warning; this is expected.
 

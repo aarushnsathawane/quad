@@ -151,3 +151,6 @@ vite.config.ts.timestamp-*
 # Quad local demo data
 data/
 .DS_Store
+
+# Expo development state
+.expo/

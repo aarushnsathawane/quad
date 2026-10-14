@@ -12,7 +12,10 @@
     "start": "node server/index.js",
     "test": "node --test tests/*.test.js",
     "check": "npm run test && npm run build",
-    "format": "prettier --write src server tests docs *.json *.ts *.md"
+    "format": "prettier --write src server tests docs *.json *.ts *.md",
+    "mobile": "npm --prefix apps/mobile start",
+    "mobile:web": "npm --prefix apps/mobile run web",
+    "mobile:check": "npm --prefix apps/mobile run check"
   },
   "dependencies": {
     "leaflet": "^1.9.4",

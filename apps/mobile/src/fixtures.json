@@ -1,0 +1,772 @@
+{
+  "me": {
+    "id": "you",
+    "firstName": "Alex",
+    "lastName": "Chen",
+    "major": "Computer Science",
+    "majorId": "cs",
+    "minorId": null,
+    "graduationYear": 2028,
+    "bio": "Usually building something, finding a good coffee, or taking the long way home.",
+    "avatarStyle": 0,
+    "university": "Rutgers University",
+    "instagramUrl": null,
+    "linkedinUrl": null,
+    "tags": [
+      {
+        "id": "t0",
+        "name": "AI",
+        "kind": "interest"
+      },
+      {
+        "id": "t5",
+        "name": "Coffee",
+        "kind": "interest"
+      },
+      {
+        "id": "t3",
+        "name": "Formula 1",
+        "kind": "interest"
+      },
+      {
+        "id": "t1",
+        "name": "Running",
+        "kind": "interest"
+      },
+      {
+        "id": "t2",
+        "name": "Startups",
+        "kind": "interest"
+      }
+    ],
+    "organizations": [
+      {
+        "id": "hackru",
+        "university_id": "rutgers",
+        "name": "HackRU",
+        "kind": "club"
+      },
+      {
+        "id": "formula",
+        "university_id": "rutgers",
+        "name": "Rutgers Formula Racing",
+        "kind": "project_team"
+      }
+    ],
+    "experiences": [
+      {
+        "id": "e2",
+        "title": "Built my first campus app",
+        "organization_name": "Side project",
+        "time_label": "Summer 2026",
+        "description": "Learning by making things people actually want to use."
+      }
+    ],
+    "relationship": "none",
+    "similarity": null
+  },
+  "people": [
+    {
+      "id": "maya",
+      "firstName": "Maya",
+      "lastName": "Patel",
+      "major": "Electrical & Computer Engineering",
+      "majorId": "ece",
+      "minorId": null,
+      "graduationYear": 2028,
+      "bio": "Building fast cars and occasionally breaking them. Always up for a coffee and a good idea.",
+      "avatarStyle": 1,
+      "university": "Rutgers University",
+      "instagramUrl": null,
+      "linkedinUrl": null,
+      "tags": [
+        {
+          "id": "t0",
+          "name": "AI",
+          "kind": "interest"
+        },
+        {
+          "id": "t3",
+          "name": "Formula 1",
+          "kind": "interest"
+        },
+        {
+          "id": "t1",
+          "name": "Running",
+          "kind": "interest"
+        },
+        {
+          "id": "t2",
+          "name": "Startups",
+          "kind": "interest"
+        }
+      ],
+      "organizations": [
+        {
+          "id": "hackru",
+          "university_id": "rutgers",
+          "name": "HackRU",
+          "kind": "club"
+        },
+        {
+          "id": "formula",
+          "university_id": "rutgers",
+          "name": "Rutgers Formula Racing",
+          "kind": "project_team"
+        }
+      ],
+      "experiences": [
+        {
+          "id": "e1",
+          "title": "Electrical systems team member",
+          "organization_name": "Rutgers Formula Racing",
+          "time_label": "2025 — Present",
+          "description": "Working with a student team to bring an electric race car to life."
+        }
+      ],
+      "relationship": "none",
+      "similarity": {
+        "kind": "organization",
+        "text": "You're both in HackRU"
+      },
+      "position": {
+        "lat": 40.5024,
+        "lng": -74.45
+      },
+      "expiresAt": "2026-10-14T04:56:56.049Z"
+    },
+    {
+      "id": "jordan",
+      "firstName": "Jordan",
+      "lastName": "Lee",
+      "major": "Design",
+      "majorId": "design",
+      "minorId": null,
+      "graduationYear": 2027,
+      "bio": "A sketchbook, an iced matcha, and too many open tabs. Say hi!",
+      "avatarStyle": 2,
+      "university": "Rutgers University",
+      "instagramUrl": null,
+      "linkedinUrl": null,
+      "tags": [
+        {
+          "id": "t5",
+          "name": "Coffee",
+          "kind": "interest"
+        },
+        {
+          "id": "t6",
+          "name": "Design",
+          "kind": "interest"
+        },
+        {
+          "id": "t10",
+          "name": "Film",
+          "kind": "interest"
+        },
+        {
+          "id": "t4",
+          "name": "Photography",
+          "kind": "interest"
+        }
+      ],
+      "organizations": [
+        {
+          "id": "designclub",
+          "university_id": "rutgers",
+          "name": "Design Collective",
+          "kind": "club"
+        },
+        {
+          "id": "photo",
+          "university_id": "rutgers",
+          "name": "Rutgers Photography Club",
+          "kind": "club"
+        }
+      ],
+      "experiences": [],
+      "relationship": "incoming",
+      "similarity": {
+        "kind": "interest",
+        "text": "You both like Coffee"
+      },
+      "position": {
+        "lat": 40.5,
+        "lng": -74.446
+      },
+      "expiresAt": "2026-10-14T04:56:56.049Z"
+    },
+    {
+      "id": "sam",
+      "firstName": "Sam",
+      "lastName": "Rivera",
+      "major": "Computer Science",
+      "majorId": "cs",
+      "minorId": null,
+      "graduationYear": 2028,
+      "bio": "Weekend hikes, late-night side projects, and a slightly unreasonable love of espresso.",
+      "avatarStyle": 3,
+      "university": "Rutgers University",
+      "instagramUrl": null,
+      "linkedinUrl": null,
+      "tags": [
+        {
+          "id": "t0",
+          "name": "AI",
+          "kind": "interest"
+        },
+        {
+          "id": "t5",
+          "name": "Coffee",
+          "kind": "interest"
+        },
+        {
+          "id": "t9",
+          "name": "Gaming",
+          "kind": "interest"
+        },
+        {
+          "id": "t8",
+          "name": "Hiking",
+          "kind": "interest"
+        }
+      ],
+      "organizations": [
+        {
+          "id": "hackru",
+          "university_id": "rutgers",
+          "name": "HackRU",
+          "kind": "club"
+        },
+        {
+          "id": "outdoors",
+          "university_id": "rutgers",
+          "name": "Rutgers Outdoors Club",
+          "kind": "club"
+        }
+      ],
+      "experiences": [],
+      "relationship": "connected",
+      "similarity": {
+        "kind": "organization",
+        "text": "You're both in HackRU"
+      },
+      "position": {
+        "lat": 40.5032,
+        "lng": -74.446
+      },
+      "expiresAt": "2026-10-14T04:56:56.049Z"
+    },
+    {
+      "id": "emily",
+      "firstName": "Emily",
+      "lastName": "Park",
+      "major": "Biological Sciences",
+      "majorId": "biology",
+      "minorId": null,
+      "graduationYear": 2029,
+      "bio": "Finding little pockets of green on campus. Ask me about my latest trail.",
+      "avatarStyle": 4,
+      "university": "Rutgers University",
+      "instagramUrl": null,
+      "linkedinUrl": null,
+      "tags": [
+        {
+          "id": "t8",
+          "name": "Hiking",
+          "kind": "interest"
+        },
+        {
+          "id": "t4",
+          "name": "Photography",
+          "kind": "interest"
+        },
+        {
+          "id": "t1",
+          "name": "Running",
+          "kind": "interest"
+        },
+        {
+          "id": "t15",
+          "name": "Sustainability",
+          "kind": "interest"
+        }
+      ],
+      "organizations": [
+        {
+          "id": "outdoors",
+          "university_id": "rutgers",
+          "name": "Rutgers Outdoors Club",
+          "kind": "club"
+        },
+        {
+          "id": "runclub",
+          "university_id": "rutgers",
+          "name": "Rutgers Running Club",
+          "kind": "sports_team"
+        }
+      ],
+      "experiences": [],
+      "relationship": "incoming",
+      "similarity": {
+        "kind": "interest",
+        "text": "You both like Running"
+      },
+      "position": {
+        "lat": 40.4992,
+        "lng": -74.45100000000001
+      },
+      "expiresAt": "2026-10-14T04:56:56.049Z"
+    },
+    {
+      "id": "noah",
+      "firstName": "Noah",
+      "lastName": "Williams",
+      "major": "Business",
+      "majorId": "business",
+      "minorId": null,
+      "graduationYear": 2027,
+      "bio": "Ideas person. Pickup basketball regular. Looking for people to build cool things with.",
+      "avatarStyle": 5,
+      "university": "Rutgers University",
+      "instagramUrl": null,
+      "linkedinUrl": null,
+      "tags": [
+        {
+          "id": "t13",
+          "name": "Basketball",
+          "kind": "interest"
+        },
+        {
+          "id": "t5",
+          "name": "Coffee",
+          "kind": "interest"
+        },
+        {
+          "id": "t2",
+          "name": "Startups",
+          "kind": "interest"
+        }
+      ],
+      "organizations": [
+        {
+          "id": "hackru",
+          "university_id": "rutgers",
+          "name": "HackRU",
+          "kind": "club"
+        }
+      ],
+      "experiences": [],
+      "relationship": "connected",
+      "similarity": {
+        "kind": "organization",
+        "text": "You're both in HackRU"
+      },
+      "position": {
+        "lat": 40.500800000000005,
+        "lng": -74.453
+      },
+      "expiresAt": "2026-10-14T04:56:56.049Z"
+    },
+    {
+      "id": "zoe",
+      "firstName": "Zoe",
+      "lastName": "Thompson",
+      "major": "Psychology",
+      "majorId": "psychology",
+      "minorId": null,
+      "graduationYear": 2028,
+      "bio": "Collecting records and making playlists for every possible mood.",
+      "avatarStyle": 6,
+      "university": "Rutgers University",
+      "instagramUrl": null,
+      "linkedinUrl": null,
+      "tags": [
+        {
+          "id": "t10",
+          "name": "Film",
+          "kind": "interest"
+        },
+        {
+          "id": "t7",
+          "name": "Music",
+          "kind": "interest"
+        },
+        {
+          "id": "t12",
+          "name": "Reading",
+          "kind": "interest"
+        }
+      ],
+      "organizations": [
+        {
+          "id": "radio",
+          "university_id": "rutgers",
+          "name": "WRSU Radio",
+          "kind": "club"
+        }
+      ],
+      "experiences": [],
+      "relationship": "none",
+      "similarity": null,
+      "position": {
+        "lat": 40.5048,
+        "lng": -74.44800000000001
+      },
+      "expiresAt": "2026-10-14T04:56:56.049Z"
+    },
+    {
+      "id": "arjun",
+      "firstName": "Arjun",
+      "lastName": "Shah",
+      "major": "Electrical & Computer Engineering",
+      "majorId": "ece",
+      "minorId": null,
+      "graduationYear": 2027,
+      "bio": "Robots by day. Sim racing by night. Probably in the workshop.",
+      "avatarStyle": 7,
+      "university": "Rutgers University",
+      "instagramUrl": null,
+      "linkedinUrl": null,
+      "tags": [
+        {
+          "id": "t0",
+          "name": "AI",
+          "kind": "interest"
+        },
+        {
+          "id": "t3",
+          "name": "Formula 1",
+          "kind": "interest"
+        },
+        {
+          "id": "t9",
+          "name": "Gaming",
+          "kind": "interest"
+        }
+      ],
+      "organizations": [
+        {
+          "id": "formula",
+          "university_id": "rutgers",
+          "name": "Rutgers Formula Racing",
+          "kind": "project_team"
+        }
+      ],
+      "experiences": [],
+      "relationship": "none",
+      "similarity": {
+        "kind": "organization",
+        "text": "You're both in Rutgers Formula Racing"
+      },
+      "position": {
+        "lat": 40.504000000000005,
+        "lng": -74.452
+      },
+      "expiresAt": "2026-10-14T04:56:56.049Z"
+    },
+    {
+      "id": "olivia",
+      "firstName": "Olivia",
+      "lastName": "Brooks",
+      "major": "Design",
+      "majorId": "design",
+      "minorId": null,
+      "graduationYear": 2029,
+      "bio": "Trying to make ordinary things a little more beautiful.",
+      "avatarStyle": 8,
+      "university": "Rutgers University",
+      "instagramUrl": null,
+      "linkedinUrl": null,
+      "tags": [
+        {
+          "id": "t6",
+          "name": "Design",
+          "kind": "interest"
+        },
+        {
+          "id": "t4",
+          "name": "Photography",
+          "kind": "interest"
+        },
+        {
+          "id": "t12",
+          "name": "Reading",
+          "kind": "interest"
+        }
+      ],
+      "organizations": [
+        {
+          "id": "designclub",
+          "university_id": "rutgers",
+          "name": "Design Collective",
+          "kind": "club"
+        },
+        {
+          "id": "photo",
+          "university_id": "rutgers",
+          "name": "Rutgers Photography Club",
+          "kind": "club"
+        }
+      ],
+      "experiences": [],
+      "relationship": "none",
+      "similarity": null,
+      "position": {
+        "lat": 40.4968,
+        "lng": -74.44800000000001
+      },
+      "expiresAt": "2026-10-14T04:56:56.049Z"
+    },
+    {
+      "id": "daniel",
+      "firstName": "Daniel",
+      "lastName": "Kim",
+      "major": "Computer Science",
+      "majorId": "cs",
+      "minorId": null,
+      "graduationYear": 2028,
+      "bio": "One more hackathon. One more run. One more cup of coffee.",
+      "avatarStyle": 9,
+      "university": "Rutgers University",
+      "instagramUrl": null,
+      "linkedinUrl": null,
+      "tags": [
+        {
+          "id": "t0",
+          "name": "AI",
+          "kind": "interest"
+        },
+        {
+          "id": "t5",
+          "name": "Coffee",
+          "kind": "interest"
+        },
+        {
+          "id": "t1",
+          "name": "Running",
+          "kind": "interest"
+        }
+      ],
+      "organizations": [
+        {
+          "id": "hackru",
+          "university_id": "rutgers",
+          "name": "HackRU",
+          "kind": "club"
+        },
+        {
+          "id": "runclub",
+          "university_id": "rutgers",
+          "name": "Rutgers Running Club",
+          "kind": "sports_team"
+        }
+      ],
+      "experiences": [],
+      "relationship": "none",
+      "similarity": {
+        "kind": "organization",
+        "text": "You're both in HackRU"
+      },
+      "position": {
+        "lat": 40.5,
+        "lng": -74.455
+      },
+      "expiresAt": "2026-10-14T04:56:56.049Z"
+    },
+    {
+      "id": "ava",
+      "firstName": "Ava",
+      "lastName": "Martinez",
+      "major": "Business",
+      "majorId": "business",
+      "minorId": null,
+      "graduationYear": 2028,
+      "bio": "Big on food, small businesses, and meeting people outside my usual circle.",
+      "avatarStyle": 10,
+      "university": "Rutgers University",
+      "instagramUrl": null,
+      "linkedinUrl": null,
+      "tags": [
+        {
+          "id": "t14",
+          "name": "Cooking",
+          "kind": "interest"
+        },
+        {
+          "id": "t7",
+          "name": "Music",
+          "kind": "interest"
+        },
+        {
+          "id": "t2",
+          "name": "Startups",
+          "kind": "interest"
+        }
+      ],
+      "organizations": [
+        {
+          "id": "radio",
+          "university_id": "rutgers",
+          "name": "WRSU Radio",
+          "kind": "club"
+        }
+      ],
+      "experiences": [],
+      "relationship": "none",
+      "similarity": {
+        "kind": "interest",
+        "text": "You both like Startups"
+      },
+      "position": {
+        "lat": 40.5064,
+        "lng": -74.45100000000001
+      },
+      "expiresAt": "2026-10-14T04:56:56.049Z"
+    },
+    {
+      "id": "leo",
+      "firstName": "Leo",
+      "lastName": "Wilson",
+      "major": "Psychology",
+      "majorId": "psychology",
+      "minorId": null,
+      "graduationYear": 2029,
+      "bio": "Here for the conversations, the pickup games, and the good campus food.",
+      "avatarStyle": 11,
+      "university": "Rutgers University",
+      "instagramUrl": null,
+      "linkedinUrl": null,
+      "tags": [
+        {
+          "id": "t13",
+          "name": "Basketball",
+          "kind": "interest"
+        },
+        {
+          "id": "t5",
+          "name": "Coffee",
+          "kind": "interest"
+        },
+        {
+          "id": "t10",
+          "name": "Film",
+          "kind": "interest"
+        }
+      ],
+      "organizations": [
+        {
+          "id": "outdoors",
+          "university_id": "rutgers",
+          "name": "Rutgers Outdoors Club",
+          "kind": "club"
+        }
+      ],
+      "experiences": [],
+      "relationship": "none",
+      "similarity": {
+        "kind": "interest",
+        "text": "You both like Coffee"
+      },
+      "position": {
+        "lat": 40.4976,
+        "lng": -74.45400000000001
+      },
+      "expiresAt": "2026-10-14T04:56:56.049Z"
+    },
+    {
+      "id": "priya",
+      "firstName": "Priya",
+      "lastName": "Nair",
+      "major": "Biological Sciences",
+      "majorId": "biology",
+      "minorId": null,
+      "graduationYear": 2027,
+      "bio": "Research, running, repeat. Looking for a weekend hiking crew.",
+      "avatarStyle": 12,
+      "university": "Rutgers University",
+      "instagramUrl": null,
+      "linkedinUrl": null,
+      "tags": [
+        {
+          "id": "t8",
+          "name": "Hiking",
+          "kind": "interest"
+        },
+        {
+          "id": "t1",
+          "name": "Running",
+          "kind": "interest"
+        },
+        {
+          "id": "t11",
+          "name": "Skiing",
+          "kind": "interest"
+        }
+      ],
+      "organizations": [
+        {
+          "id": "outdoors",
+          "university_id": "rutgers",
+          "name": "Rutgers Outdoors Club",
+          "kind": "club"
+        },
+        {
+          "id": "runclub",
+          "university_id": "rutgers",
+          "name": "Rutgers Running Club",
+          "kind": "sports_team"
+        }
+      ],
+      "experiences": [],
+      "relationship": "none",
+      "similarity": {
+        "kind": "interest",
+        "text": "You both like Running"
+      },
+      "position": {
+        "lat": 40.5048,
+        "lng": -74.455
+      },
+      "expiresAt": "2026-10-14T04:56:56.049Z"
+    }
+  ],
+  "catalog": {
+    "interests": [
+      "AI",
+      "Basketball",
+      "Coffee",
+      "Cooking",
+      "Design",
+      "Film",
+      "Formula 1",
+      "Gaming",
+      "Hiking",
+      "Music",
+      "Photography",
+      "Reading",
+      "Running",
+      "Skiing",
+      "Startups",
+      "Sustainability"
+    ],
+    "clubs": [
+      "Design Collective",
+      "HackRU",
+      "Rutgers Formula Racing",
+      "Rutgers Outdoors Club",
+      "Rutgers Photography Club",
+      "Rutgers Running Club",
+      "WRSU Radio"
+    ],
+    "majors": [
+      "Biological Sciences",
+      "Business",
+      "Computer Science",
+      "Design",
+      "Electrical & Computer Engineering",
+      "Psychology",
+      "Undeclared"
+    ]
+  }
+}

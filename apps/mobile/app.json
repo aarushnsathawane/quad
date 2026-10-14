@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Quad",
+    "slug": "quad-campus",
+    "version": "0.2.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.quadcampus.demo"
+    },
+    "android": {
+      "package": "com.quadcampus.demo",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#24523e"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "name": "Quad Mobile",
+      "shortName": "Quad",
+      "themeColor": "#24523e"
+    },
+    "scheme": "quad"
+  }
+}
