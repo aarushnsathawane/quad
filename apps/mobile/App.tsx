@@ -268,6 +268,18 @@ function Quad() {
             </Pressable>
           </View>
         </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="University-only access: school email required. Learn more."
+          onPress={() => setDialog("about")}
+          style={styles.campusAccess}
+        >
+          <Icon name="shield" size={12} color="#81936e" />
+          <Text style={styles.campusAccessText}>
+            University-only · School email required
+          </Text>
+          <Icon name="arrow" size={11} color="#98a38b" />
+        </Pressable>
         {!state.entered ? (
           <ScrollView
             contentContainerStyle={styles.welcome}
@@ -300,7 +312,8 @@ function Quad() {
               Explore the campus demo
             </Button>
             <Text style={styles.welcomeNote}>
-              Fictional students · No account needed · Saved on this device
+              Campus access requires a verified school email, such as
+              @rutgers.edu. No account needed to try this demo.
             </Text>
           </ScrollView>
         ) : (
@@ -893,6 +906,14 @@ function Quad() {
         )}
         {dialog === "about" && (
           <>
+            <View style={styles.notice}>
+              <Icon name="shield" size={18} />
+              <Text style={styles.noticeCopy}>
+                Quad is exclusively for university students. Campus access
+                requires a verified email from your school, such as @rutgers.edu
+                for Rutgers. Verification is simulated in this demo.
+              </Text>
+            </View>
             <View style={styles.aboutSymbol}>
               <Icon name="leaf" size={42} color={C.accent} />
             </View>
@@ -1501,6 +1522,22 @@ const styles = StyleSheet.create({
     maxWidth: 520,
     backgroundColor: C.paper,
     overflow: "hidden",
+  },
+  campusAccess: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    paddingHorizontal: 22,
+    paddingVertical: 8,
+    backgroundColor: "#f1f5e9",
+    borderBottomWidth: 1,
+    borderBottomColor: C.line,
+  },
+  campusAccessText: {
+    fontSize: 10,
+    color: "#7e906b",
+    flex: 1,
+    letterSpacing: 0.1,
   },
   header: {
     height: 72,
