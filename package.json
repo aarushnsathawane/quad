@@ -1,0 +1,30 @@
+{
+  "name": "quad-campus",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "node server/index.js --dev",
+    "build": "tsc --noEmit && vite build",
+    "start": "node server/index.js",
+    "test": "node --test tests/*.test.js",
+    "check": "npm run test && npm run build",
+    "format": "prettier --write src server tests docs *.json *.ts *.md"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.15",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "prettier": "^3.9.10",
+    "typescript": "~5.7.2",
+    "vite": "^6.1.0"
+  }
+}
