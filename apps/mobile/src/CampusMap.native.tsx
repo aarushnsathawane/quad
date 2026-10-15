@@ -2,7 +2,7 @@ import { useRef, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
 import { CAMPUS } from "./data";
-import { C } from "./theme";
+import { useTheme, useThemedStyles, type Palette } from "./theme";
 import { Icon, Avatar } from "./ui";
 import { groupsFor, ungroupedPeople } from "./gatherings";
 import type { MapProps } from "./map-types";
@@ -12,6 +12,10 @@ export default function CampusMap({
   onSelect,
   onGathering,
 }: MapProps) {
+  const C = useTheme().colors;
+  const styles = useThemedStyles(createStyles);
+
+  const { mode } = useTheme();
   const map = useRef<MapView>(null);
   const groups = groupsFor(people);
   useEffect(() => {
@@ -29,6 +33,7 @@ export default function CampusMap({
         style={StyleSheet.absoluteFill}
         provider={PROVIDER_DEFAULT}
         initialRegion={CAMPUS}
+        userInterfaceStyle={mode}
         showsUserLocation={false}
         showsMyLocationButton={false}
         showsPointsOfInterests={false}
@@ -47,8 +52,8 @@ export default function CampusMap({
               style={[
                 styles.pin,
                 selected === p.id && {
-                  borderColor: C.green,
-                  backgroundColor: "#e1edcc",
+                  borderColor: C.primary,
+                  backgroundColor: C.soft,
                 },
               ]}
             >
@@ -69,7 +74,7 @@ export default function CampusMap({
               style={{
                 flexDirection: "row",
                 alignItems: "center",
-                backgroundColor: C.white,
+                backgroundColor: C.surface,
                 borderRadius: 28,
                 padding: 5,
                 borderWidth: 2,
@@ -83,7 +88,7 @@ export default function CampusMap({
               ))}
               <View
                 style={{
-                  backgroundColor: C.green,
+                  backgroundColor: C.primary,
                   width: 27,
                   height: 27,
                   borderRadius: 14,
@@ -93,7 +98,11 @@ export default function CampusMap({
                 }}
               >
                 <Text
-                  style={{ fontSize: 12, fontWeight: "700", color: C.white }}
+                  style={{
+                    fontSize: 12,
+                    fontWeight: "700",
+                    color: C.onPrimary,
+                  }}
                 >
                   {g.members.length}
                 </Text>
@@ -114,35 +123,36 @@ export default function CampusMap({
     </View>
   );
 }
-const styles = StyleSheet.create({
-  pin: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 3,
-    borderColor: C.white,
-    backgroundColor: "#e8eedf",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  initials: { fontSize: 13, fontWeight: "600", color: C.green },
-  center: {
-    position: "absolute",
-    right: 13,
-    top: 16,
-    borderRadius: 13,
-    backgroundColor: C.white,
-    padding: 12,
-    boxShadow: "0 2px 8px #35472a20",
-  },
-  caption: {
-    position: "absolute",
-    bottom: 8,
-    right: 8,
-    fontSize: 8,
-    color: C.muted,
-    backgroundColor: "#fffefaeb",
-    padding: 4,
-    borderRadius: 4,
-  },
-});
+const createStyles = (C: Palette) =>
+  StyleSheet.create({
+    pin: {
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      borderWidth: 3,
+      borderColor: C.surface,
+      backgroundColor: C.soft,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    initials: { fontSize: 13, fontWeight: "600", color: C.accent },
+    center: {
+      position: "absolute",
+      right: 13,
+      top: 16,
+      borderRadius: 13,
+      backgroundColor: C.surface,
+      padding: 12,
+      boxShadow: "0 2px 8px #00000022",
+    },
+    caption: {
+      position: "absolute",
+      bottom: 8,
+      right: 8,
+      fontSize: 8,
+      color: C.muted,
+      backgroundColor: C.surface,
+      padding: 4,
+      borderRadius: 4,
+    },
+  });

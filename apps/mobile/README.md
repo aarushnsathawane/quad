@@ -73,3 +73,7 @@ Connect both clients to one protected backend, add real verified university acco
 Accepted connections can open a chat from Connections or a full profile. Composed messages persist on the device. Sample incoming messages are labeled; this demo never delivers messages to another phone or fabricates automatic replies. Pending, removed, and blocked connections cannot send messages. Older saved demo state loads without losing profile or connection edits.
 
 Map groups show explicitly assigned sample gatherings with a student count, venue, activity description, and attendee profiles. Browser hover and keyboard focus reveal a preview; phone taps open the same gathering details. Counts and names are generated from already-filtered discovery results, so blocked or filtered-out people are omitted. Groups with a single visible person fall back to an individual pin. These are curated demo groups, not GPS-derived attendance or live university events. Real gatherings will require explicit student check-ins and server-enforced visibility.
+
+## Rutgers appearance
+
+The app uses Rutgers scarlet (`#CC0033`) with black/white surfaces. The sun/moon switch in the header toggles light and dark mode and saves the preference on this device, independently of profile/chat data. Appearance also applies to dialogs, chat, controls, illustrated map artwork, native map appearance, and status-bar text. The initial theme is light; a saved choice is restored before screens render. University branding is centralized in `src/theme-values.ts`; no school selector is added in this version.

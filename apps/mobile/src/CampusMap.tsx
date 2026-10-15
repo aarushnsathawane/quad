@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { SvgXml } from "react-native-svg";
-import campus from "../assets/campus";
+import { campusArt } from "./map-art";
 import { Avatar, Icon } from "./ui";
-import { C } from "./theme";
+import { useTheme, useThemedStyles, type Palette } from "./theme";
 import { groupsFor, groupSummary, ungroupedPeople } from "./gatherings";
 import type { MapProps } from "./map-types";
 export default function CampusMap({
@@ -12,6 +12,11 @@ export default function CampusMap({
   onSelect,
   onGathering,
 }: MapProps) {
+  const C = useTheme().colors;
+  const s = useThemedStyles(createStyles);
+
+  const { mode } = useTheme();
+  const art = useMemo(() => campusArt(mode), [mode]);
   const [hovered, setHovered] = useState<string | null>(null);
   const groups = groupsFor(people);
   const active = groups.find((g) => g.id === hovered);
@@ -23,7 +28,7 @@ export default function CampusMap({
     <View style={s.canvas}>
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
         <SvgXml
-          xml={campus}
+          xml={art}
           width="100%"
           height="100%"
           preserveAspectRatio="xMidYMid slice"
@@ -38,7 +43,7 @@ export default function CampusMap({
           style={[
             s.pin,
             position(p.position),
-            selected === p.id && { borderColor: C.green, zIndex: 3 },
+            selected === p.id && { borderColor: C.primary, zIndex: 3 },
           ]}
         >
           <Avatar person={p} size={45} />
@@ -85,102 +90,103 @@ export default function CampusMap({
     </View>
   );
 }
-const s = StyleSheet.create({
-  canvas: {
-    flex: 1,
-    backgroundColor: "#eeeee5",
-    minHeight: 340,
-    overflow: "hidden",
-  },
-  pin: {
-    position: "absolute",
-    borderRadius: 26,
-    borderWidth: 2,
-    borderColor: "white",
-    backgroundColor: C.white,
-    alignItems: "center",
-    marginLeft: -24,
-    boxShadow: "0 2px 8px #35472a20",
-  },
-  name: {
-    position: "absolute",
-    top: 50,
-    fontSize: 9,
-    backgroundColor: "#fffefaeb",
-    borderRadius: 5,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    color: "#6f7d63",
-  },
-  group: {
-    position: "absolute",
-    alignItems: "center",
-    marginLeft: -34,
-    zIndex: 4,
-  },
-  faces: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: C.white,
-    padding: 5,
-    borderRadius: 30,
-    borderWidth: 2,
-    borderColor: "#8ca66e",
-    boxShadow: "0 3px 10px #3d542d25",
-  },
-  count: {
-    width: 27,
-    height: 27,
-    borderRadius: 14,
-    backgroundColor: C.green,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: -7,
-    borderWidth: 2,
-    borderColor: C.white,
-  },
-  countText: { fontSize: 12, fontWeight: "700", color: C.white },
-  groupName: {
-    fontSize: 9,
-    color: C.green,
-    fontWeight: "600",
-    backgroundColor: "#fffefaf0",
-    padding: 5,
-    borderRadius: 6,
-    marginTop: 5,
-    maxWidth: 125,
-    textAlign: "center",
-  },
-  preview: {
-    position: "absolute",
-    left: 12,
-    right: 12,
-    bottom: 29,
-    backgroundColor: C.white,
-    borderRadius: 15,
-    padding: 16,
-    gap: 8,
-    zIndex: 10,
-    boxShadow: "0 6px 25px #25462b28",
-  },
-  previewTitle: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: C.green,
-    flex: 1,
-    lineHeight: 19,
-  },
-  venue: { fontSize: 11, color: C.ink, fontWeight: "500" },
-  detail: { fontSize: 10, color: C.muted, lineHeight: 17 },
-  hint: { fontSize: 8, color: "#8da373" },
-  caption: {
-    position: "absolute",
-    bottom: 7,
-    right: 8,
-    fontSize: 8,
-    color: "#829078",
-    backgroundColor: "#fffefaab",
-    padding: 3,
-    borderRadius: 4,
-  },
-});
+const createStyles = (C: Palette) =>
+  StyleSheet.create({
+    canvas: {
+      flex: 1,
+      backgroundColor: C.mapBase,
+      minHeight: 340,
+      overflow: "hidden",
+    },
+    pin: {
+      position: "absolute",
+      borderRadius: 26,
+      borderWidth: 2,
+      borderColor: "white",
+      backgroundColor: C.surface,
+      alignItems: "center",
+      marginLeft: -24,
+      boxShadow: "0 2px 8px #00000022",
+    },
+    name: {
+      position: "absolute",
+      top: 50,
+      fontSize: 9,
+      backgroundColor: C.surface,
+      borderRadius: 5,
+      paddingHorizontal: 5,
+      paddingVertical: 2,
+      color: C.muted,
+    },
+    group: {
+      position: "absolute",
+      alignItems: "center",
+      marginLeft: -34,
+      zIndex: 4,
+    },
+    faces: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: C.surface,
+      padding: 5,
+      borderRadius: 30,
+      borderWidth: 2,
+      borderColor: C.accent,
+      boxShadow: "0 3px 10px #00000022",
+    },
+    count: {
+      width: 27,
+      height: 27,
+      borderRadius: 14,
+      backgroundColor: C.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      marginLeft: -7,
+      borderWidth: 2,
+      borderColor: C.surface,
+    },
+    countText: { fontSize: 12, fontWeight: "700", color: C.onPrimary },
+    groupName: {
+      fontSize: 9,
+      color: C.accent,
+      fontWeight: "600",
+      backgroundColor: C.surface,
+      padding: 5,
+      borderRadius: 6,
+      marginTop: 5,
+      maxWidth: 125,
+      textAlign: "center",
+    },
+    preview: {
+      position: "absolute",
+      left: 12,
+      right: 12,
+      bottom: 29,
+      backgroundColor: C.surface,
+      borderRadius: 15,
+      padding: 16,
+      gap: 8,
+      zIndex: 10,
+      boxShadow: "0 6px 25px #00000022",
+    },
+    previewTitle: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: C.accent,
+      flex: 1,
+      lineHeight: 19,
+    },
+    venue: { fontSize: 11, color: C.ink, fontWeight: "500" },
+    detail: { fontSize: 10, color: C.muted, lineHeight: 17 },
+    hint: { fontSize: 8, color: C.muted },
+    caption: {
+      position: "absolute",
+      bottom: 7,
+      right: 8,
+      fontSize: 8,
+      color: C.muted,
+      backgroundColor: C.surface,
+      padding: 3,
+      borderRadius: 4,
+    },
+  });

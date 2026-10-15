@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { View, Text, TextInput, ScrollView, StyleSheet } from "react-native";
 import type { Message, Person } from "./model";
 import { Avatar, Button, Icon } from "./ui";
-import { C } from "./theme";
+import { useTheme, useThemedStyles, type Palette } from "./theme";
 export default function Chat({
   person,
   messages,
@@ -14,6 +14,9 @@ export default function Chat({
   saving: boolean;
   onSend: (text: string) => Promise<boolean>;
 }) {
+  const C = useTheme().colors;
+  const s = useThemedStyles(createStyles);
+
   const [draft, setDraft] = useState("");
   const scroll = useRef<ScrollView>(null);
   useEffect(() => {
@@ -55,12 +58,18 @@ export default function Chat({
               style={[s.bubble, m.author === "you" ? s.mine : s.theirs]}
             >
               <Text
-                style={[s.message, m.author === "you" && { color: C.white }]}
+                style={[
+                  s.message,
+                  m.author === "you" && { color: C.onPrimary },
+                ]}
               >
                 {m.text}
               </Text>
               <Text
-                style={[s.time, m.author === "you" && { color: "#c4d6b6" }]}
+                style={[
+                  s.time,
+                  m.author === "you" && { color: C.onPrimaryMuted },
+                ]}
               >
                 {m.author === "them" ? "Sample message · " : ""}
                 {new Date(m.createdAt).toLocaleTimeString([], {
@@ -96,52 +105,58 @@ export default function Chat({
     </View>
   );
 }
-const s = StyleSheet.create({
-  root: { gap: 13 },
-  identity: { flexDirection: "row", alignItems: "center", gap: 10 },
-  name: { fontSize: 15, fontWeight: "600", color: C.ink },
-  caption: { fontSize: 10, color: C.muted, marginTop: 4 },
-  notice: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    backgroundColor: C.sage,
-    padding: 11,
-    borderRadius: 10,
-  },
-  noticeText: { flex: 1, fontSize: 10, color: C.muted, lineHeight: 16 },
-  thread: { height: 265, maxHeight: 330 },
-  threadContent: { gap: 12, paddingVertical: 10 },
-  bubble: {
-    maxWidth: "87%",
-    borderRadius: 15,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    gap: 6,
-  },
-  mine: {
-    alignSelf: "flex-end",
-    backgroundColor: C.green,
-    borderBottomRightRadius: 4,
-  },
-  theirs: {
-    alignSelf: "flex-start",
-    backgroundColor: "#eef2e5",
-    borderBottomLeftRadius: 4,
-  },
-  message: { fontSize: 13, color: C.ink, lineHeight: 21 },
-  time: { fontSize: 8, color: "#94a082" },
-  empty: { color: C.muted, fontSize: 12, textAlign: "center", paddingTop: 60 },
-  input: {
-    borderWidth: 1,
-    borderColor: C.line,
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 14,
-    minHeight: 58,
-    maxHeight: 125,
-    color: C.ink,
-    textAlignVertical: "top",
-  },
-});
+const createStyles = (C: Palette) =>
+  StyleSheet.create({
+    root: { gap: 13 },
+    identity: { flexDirection: "row", alignItems: "center", gap: 10 },
+    name: { fontSize: 15, fontWeight: "600", color: C.ink },
+    caption: { fontSize: 10, color: C.muted, marginTop: 4 },
+    notice: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 8,
+      backgroundColor: C.soft,
+      padding: 11,
+      borderRadius: 10,
+    },
+    noticeText: { flex: 1, fontSize: 10, color: C.muted, lineHeight: 16 },
+    thread: { height: 265, maxHeight: 330 },
+    threadContent: { gap: 12, paddingVertical: 10 },
+    bubble: {
+      maxWidth: "87%",
+      borderRadius: 15,
+      paddingHorizontal: 14,
+      paddingVertical: 11,
+      gap: 6,
+    },
+    mine: {
+      alignSelf: "flex-end",
+      backgroundColor: C.primary,
+      borderBottomRightRadius: 4,
+    },
+    theirs: {
+      alignSelf: "flex-start",
+      backgroundColor: C.soft,
+      borderBottomLeftRadius: 4,
+    },
+    message: { fontSize: 13, color: C.ink, lineHeight: 21 },
+    time: { fontSize: 8, color: C.muted },
+    empty: {
+      color: C.muted,
+      fontSize: 12,
+      textAlign: "center",
+      paddingTop: 60,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: C.line,
+      backgroundColor: C.paper,
+      borderRadius: 12,
+      padding: 12,
+      fontSize: 14,
+      minHeight: 58,
+      maxHeight: 125,
+      color: C.ink,
+      textAlignVertical: "top",
+    },
+  });

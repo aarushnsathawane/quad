@@ -8,9 +8,11 @@ import {
 } from "react-native";
 import { SvgXml } from "react-native-svg";
 import portraits from "../assets/portraits.json";
-import { C, serif } from "./theme";
+import { useTheme, useThemedStyles, type Palette, serif } from "./theme";
 import type { Profile } from "./model";
 const paths: Record<string, string> = {
+  moon: '<path d="M20 14A9 9 0 0 1 10 3 9 9 0 1 0 20 14Z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1"/>',
   map: '<path d="M19 10c0 6-7 11-7 11S5 16 5 10a7 7 0 0 1 14 0Z"/><circle cx="12" cy="10" r="2.5"/>',
   users:
     '<circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3m1-16a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v3"/>',
@@ -37,15 +39,18 @@ const paths: Record<string, string> = {
 export function Icon({
   name,
   size = 20,
-  color = C.green,
+  color,
 }: {
   name: string;
   size?: number;
   color?: string;
 }) {
+  const C = useTheme().colors;
+  const s = useThemedStyles(createStyles);
+
   return (
     <SvgXml
-      xml={`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths[name] || paths.info}</svg>`}
+      xml={`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${color ?? C.accent}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths[name] || paths.info}</svg>`}
       width={size}
       height={size}
     />
@@ -58,6 +63,9 @@ export function Avatar({
   person: Pick<Profile, "avatar" | "firstName" | "lastName">;
   size?: number;
 }) {
+  const C = useTheme().colors;
+  const s = useThemedStyles(createStyles);
+
   return (
     <View
       accessibilityLabel={`${person.firstName} ${person.lastName}`}
@@ -67,8 +75,8 @@ export function Avatar({
         borderRadius: size / 2,
         overflow: "hidden",
         borderWidth: 2,
-        borderColor: C.white,
-        backgroundColor: C.sage,
+        borderColor: C.surface,
+        backgroundColor: C.soft,
       }}
     >
       <SvgXml
@@ -96,6 +104,9 @@ export function Button({
   icon?: string;
   loading?: boolean;
 }) {
+  const C = useTheme().colors;
+  const s = useThemedStyles(createStyles);
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -104,19 +115,23 @@ export function Button({
       style={({ pressed }) => [
         s.button,
         secondary && s.secondary,
-        danger && { backgroundColor: C.red },
+        danger && { backgroundColor: C.danger },
         (disabled || loading) && { opacity: 0.5 },
         pressed && { opacity: 0.8 },
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={secondary ? C.green : C.white} />
+        <ActivityIndicator color={secondary ? C.accent : C.onPrimary} />
       ) : (
         !!icon && (
-          <Icon name={icon} size={17} color={secondary ? C.green : C.white} />
+          <Icon
+            name={icon}
+            size={17}
+            color={secondary ? C.accent : C.onPrimary}
+          />
         )
       )}
-      <Text style={[s.buttonText, secondary && { color: C.green }]}>
+      <Text style={[s.buttonText, secondary && { color: C.accent }]}>
         {children}
       </Text>
     </Pressable>
@@ -133,6 +148,9 @@ export function Chip({
   onPress?: () => void;
   disabled?: boolean;
 }) {
+  const C = useTheme().colors;
+  const s = useThemedStyles(createStyles);
+
   return (
     <Pressable
       accessibilityRole={onPress ? "button" : undefined}
@@ -142,7 +160,7 @@ export function Chip({
       style={[s.chip, selected && s.chosen, disabled && { opacity: 0.4 }]}
     >
       <Text
-        style={[s.chipText, selected && { color: C.green, fontWeight: "600" }]}
+        style={[s.chipText, selected && { color: C.accent, fontWeight: "600" }]}
       >
         {children}
       </Text>
@@ -150,12 +168,18 @@ export function Chip({
   );
 }
 export function Label({ children }: { children: ReactNode }) {
+  const C = useTheme().colors;
+  const s = useThemedStyles(createStyles);
+
   return <Text style={s.label}>{children}</Text>;
 }
 export function Reason({ text }: { text: string | null }) {
+  const C = useTheme().colors;
+  const s = useThemedStyles(createStyles);
+
   return text ? (
     <View style={s.reason}>
-      <Icon name="spark" size={15} color="#66854f" />
+      <Icon name="spark" size={15} color={C.accent} />
       <Text style={s.reasonText}>{text}</Text>
     </View>
   ) : null;
@@ -167,6 +191,9 @@ export function Empty({
   title: string;
   children: ReactNode;
 }) {
+  const C = useTheme().colors;
+  const s = useThemedStyles(createStyles);
+
   return (
     <View style={s.empty}>
       <Icon name="leaf" size={30} color={C.accent} />
@@ -175,57 +202,62 @@ export function Empty({
     </View>
   );
 }
-export const s = StyleSheet.create({
-  button: {
-    backgroundColor: C.green,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 13,
-    flexDirection: "row",
-    gap: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 48,
-  },
-  secondary: { backgroundColor: C.white, borderWidth: 1, borderColor: C.line },
-  buttonText: { color: C.white, fontSize: 13, fontWeight: "600" },
-  chip: {
-    backgroundColor: "#f0f3e8",
-    borderColor: "#e4e9d9",
-    borderWidth: 1,
-    borderRadius: 9,
-    paddingHorizontal: 11,
-    paddingVertical: 8,
-  },
-  chosen: { backgroundColor: "#e0eccd", borderColor: "#b9cf9e" },
-  chipText: { fontSize: 11, color: "#75846a" },
-  label: {
-    fontSize: 10,
-    letterSpacing: 1.6,
-    fontWeight: "600",
-    color: "#8b9a79",
-    textTransform: "uppercase",
-  },
-  reason: {
-    flexDirection: "row",
-    gap: 7,
-    alignItems: "center",
-    padding: 11,
-    backgroundColor: C.sage,
-    borderRadius: 10,
-  },
-  reasonText: { fontSize: 11, color: "#68844e", lineHeight: 17, flex: 1 },
-  empty: { alignItems: "center", gap: 12, padding: 30 },
-  emptyTitle: {
-    fontFamily: serif,
-    fontSize: 23,
-    color: C.ink,
-    textAlign: "center",
-  },
-  emptyCopy: {
-    color: C.muted,
-    fontSize: 12,
-    lineHeight: 20,
-    textAlign: "center",
-  },
-});
+const createStyles = (C: Palette) =>
+  StyleSheet.create({
+    button: {
+      backgroundColor: C.primary,
+      paddingVertical: 14,
+      paddingHorizontal: 18,
+      borderRadius: 13,
+      flexDirection: "row",
+      gap: 9,
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: 48,
+    },
+    secondary: {
+      backgroundColor: C.surface,
+      borderWidth: 1,
+      borderColor: C.line,
+    },
+    buttonText: { color: C.onPrimary, fontSize: 13, fontWeight: "600" },
+    chip: {
+      backgroundColor: C.soft,
+      borderColor: C.line,
+      borderWidth: 1,
+      borderRadius: 9,
+      paddingHorizontal: 11,
+      paddingVertical: 8,
+    },
+    chosen: { backgroundColor: C.soft, borderColor: C.accent },
+    chipText: { fontSize: 11, color: C.muted },
+    label: {
+      fontSize: 10,
+      letterSpacing: 1.6,
+      fontWeight: "600",
+      color: C.muted,
+      textTransform: "uppercase",
+    },
+    reason: {
+      flexDirection: "row",
+      gap: 7,
+      alignItems: "center",
+      padding: 11,
+      backgroundColor: C.soft,
+      borderRadius: 10,
+    },
+    reasonText: { fontSize: 11, color: C.accent, lineHeight: 17, flex: 1 },
+    empty: { alignItems: "center", gap: 12, padding: 30 },
+    emptyTitle: {
+      fontFamily: serif,
+      fontSize: 23,
+      color: C.ink,
+      textAlign: "center",
+    },
+    emptyCopy: {
+      color: C.muted,
+      fontSize: 12,
+      lineHeight: 20,
+      textAlign: "center",
+    },
+  });

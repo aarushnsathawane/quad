@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.quadcampus.demo"
@@ -14,14 +14,14 @@
       "package": "com.quadcampus.demo",
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#24523e"
+        "backgroundColor": "#CC0033"
       }
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "name": "Quad Mobile",
       "shortName": "Quad",
-      "themeColor": "#24523e"
+      "themeColor": "#CC0033"
     },
     "scheme": "quad"
   }

@@ -8,12 +8,14 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import * as SystemUI from "expo-system-ui";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import CampusMap from "./src/CampusMap";
 import Chat from "./src/Chat";
@@ -36,7 +38,13 @@ import {
   type State,
 } from "./src/model";
 import { Avatar, Button, Chip, Empty, Icon, Label, Reason } from "./src/ui";
-import { C, serif } from "./src/theme";
+import {
+  useTheme,
+  useThemedStyles,
+  type Palette,
+  serif,
+  ThemeProvider,
+} from "./src/theme";
 const STORAGE_KEY = "@quad/mobile-demo/v1";
 type Tab = "map" | "connections" | "profile";
 type Dialog =
@@ -55,12 +63,58 @@ type Filter = "everyone" | "interests" | "clubs" | "connections";
 export default function App() {
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" />
-      <Quad />
+      <ThemeProvider>
+        <ThemedStatusBar />
+        <Quad />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
+function ThemedStatusBar() {
+  const { mode, colors } = useTheme();
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(colors.paper).catch(() => {});
+  }, [colors.paper]);
+  return <StatusBar style={mode === "dark" ? "light" : "dark"} />;
+}
+function ThemeToggle() {
+  const { mode, colors, changing, toggleMode } = useTheme();
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 2,
+        marginLeft: 2,
+      }}
+    >
+      <Icon
+        name={mode === "dark" ? "moon" : "sun"}
+        size={15}
+        color={colors.accent}
+      />
+      <Switch
+        accessibilityRole="switch"
+        accessibilityLabel="Dark mode"
+        accessibilityHint="Switch between light and dark appearance"
+        value={mode === "dark"}
+        onValueChange={() => toggleMode()}
+        disabled={changing}
+        trackColor={{ false: "#C9CBD1", true: colors.primary }}
+        thumbColor="#FFFFFF"
+        {...(Platform.OS === "web"
+          ? { activeThumbColor: "#FFFFFF", activeTrackColor: colors.primary }
+          : {})}
+        ios_backgroundColor={colors.line}
+        style={{ transform: [{ scale: 0.8 }] }}
+      />
+    </View>
+  );
+}
 function Quad() {
+  const C = useTheme().colors;
+  const styles = useThemedStyles(createStyles);
+
   const [state, setState] = useState<State>(initialState),
     [ready, setReady] = useState(false),
     [saving, setSaving] = useState(false),
@@ -77,6 +131,17 @@ function Quad() {
     >("connected"),
     [now, setNow] = useState(Date.now());
   const working = useRef(false);
+  const { mode, colors, error: themeError } = useTheme();
+  useEffect(() => {
+    if (themeError) setToast(themeError);
+  }, [themeError]);
+  useEffect(() => {
+    if (Platform.OS === "web" && typeof document !== "undefined") {
+      document.documentElement.style.colorScheme = mode;
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute("content", colors.paper);
+    }
+  }, [mode, colors]);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -231,7 +296,7 @@ function Quad() {
   if (!ready)
     return (
       <SafeAreaView style={styles.root}>
-        <ActivityIndicator color={C.green} />
+        <ActivityIndicator color={C.primary} />
         <Text style={styles.loadingText}>Finding your corner of campus…</Text>
       </SafeAreaView>
     );
@@ -266,6 +331,7 @@ function Quad() {
             >
               <Text style={styles.demoBadge}>DEMO</Text>
             </Pressable>
+            <ThemeToggle />
           </View>
         </View>
         <Pressable
@@ -274,11 +340,11 @@ function Quad() {
           onPress={() => setDialog("about")}
           style={styles.campusAccess}
         >
-          <Icon name="shield" size={12} color="#81936e" />
+          <Icon name="shield" size={12} color={C.accent} />
           <Text style={styles.campusAccessText}>
             University-only · School email required
           </Text>
-          <Icon name="arrow" size={11} color="#98a38b" />
+          <Icon name="arrow" size={11} color={C.muted} />
         </Pressable>
         {!state.entered ? (
           <ScrollView
@@ -288,7 +354,7 @@ function Quad() {
             <Label>A smaller world starts here</Label>
             <Text style={styles.welcomeTitle}>
               Your campus.{`\n`}Your{" "}
-              <Text style={{ color: "#819967", fontStyle: "italic" }}>
+              <Text style={{ color: C.accent, fontStyle: "italic" }}>
                 people.
               </Text>
             </Text>
@@ -461,7 +527,7 @@ function Quad() {
                     <TextInput
                       accessibilityLabel="Search students, interests or clubs"
                       placeholder="Search people, interests, clubs"
-                      placeholderTextColor="#9aa58b"
+                      placeholderTextColor={C.muted}
                       value={search}
                       onChangeText={setSearch}
                       style={styles.searchInput}
@@ -497,7 +563,7 @@ function Quad() {
                             {p.major} · {p.year}
                           </Text>
                         </View>
-                        <Icon name="arrow" size={17} color="#a1ad92" />
+                        <Icon name="arrow" size={17} color={C.muted} />
                       </View>
                       <View style={styles.chipRow}>
                         {p.interests.slice(0, 3).map((i) => (
@@ -667,13 +733,13 @@ function Quad() {
                 >
                   <Icon
                     name={t.icon}
-                    color={tab === t.id ? C.green : "#98a28d"}
+                    color={tab === t.id ? C.primary : C.muted}
                     size={21}
                   />
                   <Text
                     style={[
                       styles.tabText,
-                      tab === t.id && { color: C.green, fontWeight: "600" },
+                      tab === t.id && { color: C.accent, fontWeight: "600" },
                     ]}
                   >
                     {t.label}
@@ -954,11 +1020,11 @@ function Quad() {
           onPress={() => setToast("")}
           style={styles.toast}
         >
-          <Icon name="info" size={17} color={C.white} />
+          <Icon name="info" size={17} color={C.onPrimary} />
           <Text accessibilityLiveRegion="polite" style={styles.toastText}>
             {toast}
           </Text>
-          <Icon name="close" size={15} color={C.white} />
+          <Icon name="close" size={15} color={C.onPrimary} />
         </Pressable>
       )}
     </SafeAreaView>
@@ -975,6 +1041,9 @@ function Sheet({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const C = useTheme().colors;
+  const styles = useThemedStyles(createStyles);
+
   return (
     <Modal
       visible={open}
@@ -1016,11 +1085,14 @@ function Sheet({
   );
 }
 function ProfileContent({ profile: p }: { profile: Profile }) {
+  const C = useTheme().colors;
+  const styles = useThemedStyles(createStyles);
+
   return (
     <View style={styles.profileContent}>
       <View style={styles.profileCover}>
         <View style={styles.coverCircle} />
-        <Icon name="leaf" size={60} color="#98ac7e" />
+        <Icon name="leaf" size={60} color={C.accent} />
       </View>
       <View style={styles.profileAvatar}>
         <Avatar person={p} size={86} />
@@ -1097,6 +1169,9 @@ function Field({
   numeric?: boolean;
   placeholder?: string;
 }) {
+  const C = useTheme().colors;
+  const styles = useThemedStyles(createStyles);
+
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -1108,7 +1183,7 @@ function Field({
         maxLength={max}
         keyboardType={numeric ? "number-pad" : "default"}
         placeholder={placeholder}
-        placeholderTextColor="#a2ab96"
+        placeholderTextColor={C.muted}
         style={[
           styles.input,
           multiline && { minHeight: 90, textAlignVertical: "top" },
@@ -1126,6 +1201,9 @@ function ProfileEditor({
   saving: boolean;
   onSave: (p: Profile) => void;
 }) {
+  const C = useTheme().colors;
+  const styles = useThemedStyles(createStyles);
+
   const [draft, setDraft] = useState<Profile>(() =>
       JSON.parse(JSON.stringify(initial)),
     ),
@@ -1333,6 +1411,9 @@ function VisibilityEditor({
   onSave: (a: Audience, m: number | null) => void;
   onUnblock: (id: string) => void;
 }) {
+  const C = useTheme().colors;
+  const styles = useThemedStyles(createStyles);
+
   const [audience, setAudience] = useState<Audience>(state.visibility.audience),
     [duration, setDuration] = useState<number | null>(60);
   return (
@@ -1464,6 +1545,9 @@ function ReportEditor({
   saving: boolean;
   onSave: (r: string, d: string) => void;
 }) {
+  const C = useTheme().colors;
+  const styles = useThemedStyles(createStyles);
+
   const [reason, setReason] = useState("Safety concern"),
     [details, setDetails] = useState("");
   return (
@@ -1509,411 +1593,423 @@ function ReportEditor({
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: Platform.OS === "web" ? "#e9ede2" : C.paper,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  frame: {
-    flex: 1,
-    width: "100%",
-    maxWidth: 520,
-    backgroundColor: C.paper,
-    overflow: "hidden",
-  },
-  campusAccess: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    paddingHorizontal: 22,
-    paddingVertical: 8,
-    backgroundColor: "#f1f5e9",
-    borderBottomWidth: 1,
-    borderBottomColor: C.line,
-  },
-  campusAccessText: {
-    fontSize: 10,
-    color: "#7e906b",
-    flex: 1,
-    letterSpacing: 0.1,
-  },
-  header: {
-    height: 72,
-    paddingHorizontal: 22,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: C.white,
-    borderBottomWidth: 1,
-    borderColor: C.line,
-  },
-  brand: { flexDirection: "row", gap: 8, alignItems: "center" },
-  logo: {
-    backgroundColor: C.green,
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  logoText: {
-    fontSize: 28,
-    lineHeight: 33,
-    color: "#e6f1d2",
-    fontWeight: "700",
-  },
-  brandText: {
-    fontSize: 31,
-    fontWeight: "700",
-    letterSpacing: -1.8,
-    color: C.ink,
-  },
-  headerRight: { flexDirection: "row", gap: 8, alignItems: "center" },
-  rutgers: {
-    fontFamily: serif,
-    fontSize: 22,
-    color: "#aa4a3e",
-    fontWeight: "700",
-  },
-  campusName: { fontSize: 11, color: C.muted },
-  demoBadge: {
-    fontSize: 8,
-    letterSpacing: 1,
-    backgroundColor: "#eef1e4",
-    borderRadius: 5,
-    padding: 6,
-    color: "#83906f",
-  },
-  content: { flex: 1 },
-  contentInner: { padding: 20, gap: 15, paddingBottom: 28 },
-  intro: { gap: 9, marginBottom: 2 },
-  title: {
-    fontFamily: serif,
-    fontSize: 32,
-    lineHeight: 39,
-    color: C.ink,
-    letterSpacing: -0.7,
-  },
-  subtitle: { fontSize: 11, color: C.muted, lineHeight: 18 },
-  visibilityPill: {
-    flexDirection: "row",
-    alignSelf: "flex-start",
-    alignItems: "center",
-    gap: 7,
-    backgroundColor: C.sage,
-    borderWidth: 1,
-    borderColor: C.line,
-    borderRadius: 10,
-    padding: 9,
-    marginTop: 5,
-  },
-  visibilityText: { fontSize: 10, color: "#69815a" },
-  filters: { gap: 7, paddingBottom: 2 },
-  mapCard: {
-    height: 430,
-    borderRadius: 20,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#dce4d3",
-    backgroundColor: "#eceee2",
-  },
-  mapLabel: {
-    position: "absolute",
-    top: 13,
-    left: 12,
-    backgroundColor: "#fffefaee",
-    borderRadius: 12,
-    padding: 11,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 9,
-    boxShadow: "0 2px 12px #33422510",
-  },
-  mapLabelTitle: { fontSize: 11, fontWeight: "600", color: C.ink },
-  mapLabelCopy: { fontSize: 8, color: C.muted, marginTop: 4 },
-  popup: {
-    position: "absolute",
-    left: 12,
-    right: 12,
-    bottom: 26,
-    backgroundColor: C.white,
-    padding: 15,
-    borderRadius: 17,
-    gap: 12,
-    boxShadow: "0 4px 24px #2d493028",
-  },
-  popupClose: { position: "absolute", top: 5, right: 5, padding: 7, zIndex: 2 },
-  popupPerson: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingRight: 12,
-  },
-  personName: { fontSize: 14, fontWeight: "600", color: C.ink },
-  personMeta: { fontSize: 10, color: C.muted, lineHeight: 16, marginTop: 4 },
-  actions: { flexDirection: "row", gap: 9, marginTop: 3 },
-  listHeading: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 8,
-  },
-  sectionTitle: { fontSize: 14, fontWeight: "600", color: C.ink },
-  count: { fontSize: 11, color: C.accent },
-  finePrint: { fontSize: 10, lineHeight: 17, color: "#919e83" },
-  search: {
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "center",
-    padding: 12,
-    borderWidth: 1,
-    borderColor: C.line,
-    borderRadius: 12,
-    backgroundColor: C.white,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 12,
-    color: C.ink,
-    padding: 0,
-    minHeight: 22,
-  },
-  personCard: {
-    padding: 16,
-    borderWidth: 1,
-    borderColor: C.line,
-    borderRadius: 16,
-    backgroundColor: C.white,
-    gap: 12,
-  },
-  cardTop: { flexDirection: "row", alignItems: "center", gap: 11 },
-  chipRow: { flexDirection: "row", gap: 7, flexWrap: "wrap", marginTop: 4 },
-  endNote: {
-    textAlign: "center",
-    fontFamily: serif,
-    fontStyle: "italic",
-    fontSize: 16,
-    color: "#8da078",
-    marginVertical: 15,
-  },
-  tabBar: {
-    height: 67,
-    borderTopWidth: 1,
-    borderColor: C.line,
-    backgroundColor: C.white,
-    flexDirection: "row",
-  },
-  tab: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
-    borderTopWidth: 2,
-    borderTopColor: "transparent",
-  },
-  activeTab: { borderTopColor: C.green },
-  tabText: { fontSize: 9, color: "#96a18b" },
-  badge: {
-    position: "absolute",
-    top: 7,
-    right: "28%",
-    backgroundColor: "#dce8ca",
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  badgeText: { color: C.green, fontSize: 8, fontWeight: "600" },
-  connectionTabs: { flexDirection: "row", gap: 7, marginBottom: 8 },
-  profileContent: { gap: 9 },
-  profileCover: {
-    height: 100,
-    backgroundColor: "#dce7cb",
-    borderRadius: 17,
-    overflow: "hidden",
-    alignItems: "flex-end",
-    justifyContent: "center",
-    paddingRight: 22,
-  },
-  coverCircle: {
-    position: "absolute",
-    height: 180,
-    width: 180,
-    borderRadius: 90,
-    borderWidth: 1,
-    borderColor: "#b9caa5",
-    right: 30,
-    top: -100,
-  },
-  profileAvatar: { marginTop: -53, marginLeft: 18 },
-  profileName: {
-    fontFamily: serif,
-    fontSize: 30,
-    color: C.ink,
-    lineHeight: 36,
-    marginTop: 1,
-  },
-  profileBio: { fontSize: 12, lineHeight: 21, color: C.muted, marginTop: 12 },
-  profileSection: {
-    borderTopWidth: 1,
-    borderColor: C.line,
-    paddingTop: 18,
-    marginTop: 12,
-    gap: 13,
-  },
-  affiliation: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "#f0f4e7",
-    padding: 12,
-    borderRadius: 11,
-  },
-  clubText: { fontSize: 12, color: C.ink, fontWeight: "500", lineHeight: 19 },
-  experience: {
-    gap: 6,
-    borderLeftWidth: 2,
-    borderColor: "#cbdcba",
-    paddingLeft: 12,
-  },
-  privacyCard: {
-    backgroundColor: C.white,
-    borderWidth: 1,
-    borderColor: C.line,
-    borderRadius: 16,
-    padding: 20,
-    gap: 12,
-    marginTop: 6,
-  },
-  smallTitle: { fontFamily: serif, fontSize: 25, color: C.ink },
-  bodyCopy: { fontSize: 12, lineHeight: 21, color: C.muted },
-  welcome: { padding: 25, gap: 19, paddingTop: 35 },
-  welcomeTitle: {
-    fontFamily: serif,
-    fontSize: 54,
-    color: C.ink,
-    lineHeight: 59,
-    letterSpacing: -1.5,
-  },
-  welcomeCopy: { fontSize: 12, lineHeight: 22, color: C.muted },
-  welcomeMap: {
-    height: 260,
-    borderRadius: 75,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: C.line,
-    marginTop: 4,
-  },
-  welcomeNote: {
-    fontSize: 9,
-    lineHeight: 17,
-    textAlign: "center",
-    color: "#98a38b",
-    marginBottom: 15,
-  },
-  loadingText: { fontSize: 12, color: C.muted, marginTop: 18 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "#1c33276e",
-    justifyContent: "flex-end",
-    alignItems: "center",
-  },
-  sheet: {
-    width: "100%",
-    maxWidth: 520,
-    maxHeight: "94%",
-    backgroundColor: C.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    overflow: "hidden",
-    boxShadow: "0 -8px 40px #21372a20",
-  },
-  sheetHeader: {
-    paddingVertical: 17,
-    paddingHorizontal: 22,
-    borderBottomWidth: 1,
-    borderColor: C.line,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  sheetTitle: { fontSize: 14, fontWeight: "600", color: C.ink },
-  closeButton: { padding: 5 },
-  sheetBody: { padding: 22, paddingBottom: 30, gap: 17 },
-  field: { gap: 8, marginTop: 3 },
-  fieldLabel: { fontSize: 12, fontWeight: "500", color: C.ink, lineHeight: 19 },
-  input: {
-    borderWidth: 1,
-    borderColor: "#dce4d2",
-    borderRadius: 11,
-    backgroundColor: "#fff",
-    padding: 13,
-    color: C.ink,
-    fontSize: 14,
-    minHeight: 47,
-  },
-  experienceFields: {
-    padding: 13,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: C.line,
-    borderRadius: 12,
-    backgroundColor: "#f3f6eb",
-  },
-  textLink: { alignItems: "center", padding: 4 },
-  textLinkCopy: { fontSize: 11, color: "#7e965f", fontWeight: "500" },
-  audienceOption: {
-    flexDirection: "row",
-    gap: 11,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: C.line,
-    borderRadius: 13,
-    alignItems: "center",
-  },
-  audienceSelected: { backgroundColor: "#eff5e4", borderColor: "#aec594" },
-  notice: {
-    padding: 15,
-    backgroundColor: "#eff4e5",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e0e9d3",
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-  },
-  noticeCopy: { fontSize: 11, lineHeight: 19, color: "#81936b", flex: 1 },
-  blockedRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 9,
-  },
-  aboutSymbol: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: C.sage,
-    alignSelf: "center",
-    alignItems: "center",
-    justifyContent: "center",
-    marginVertical: 10,
-  },
-  toast: {
-    position: "absolute",
-    bottom: 85,
-    left: 20,
-    right: 20,
-    maxWidth: 480,
-    alignSelf: "center",
-    backgroundColor: C.green,
-    borderRadius: 13,
-    padding: 15,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    boxShadow: "0 3px 20px #20372930",
-  },
-  toastText: { flex: 1, color: C.white, fontSize: 12, lineHeight: 18 },
-});
+const createStyles = (C: Palette) =>
+  StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: Platform.OS === "web" ? C.outer : C.paper,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    frame: {
+      flex: 1,
+      width: "100%",
+      maxWidth: 520,
+      backgroundColor: C.paper,
+      overflow: "hidden",
+    },
+    campusAccess: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 7,
+      paddingHorizontal: 22,
+      paddingVertical: 8,
+      backgroundColor: C.soft,
+      borderBottomWidth: 1,
+      borderBottomColor: C.line,
+    },
+    campusAccessText: {
+      fontSize: 10,
+      color: C.muted,
+      flex: 1,
+      letterSpacing: 0.1,
+    },
+    header: {
+      height: 72,
+      paddingHorizontal: 22,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: C.surface,
+      borderBottomWidth: 1,
+      borderColor: C.line,
+    },
+    brand: { flexDirection: "row", gap: 8, alignItems: "center" },
+    logo: {
+      backgroundColor: C.primary,
+      width: 32,
+      height: 32,
+      borderRadius: 10,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    logoText: {
+      fontSize: 28,
+      lineHeight: 33,
+      color: C.onPrimary,
+      fontWeight: "700",
+    },
+    brandText: {
+      fontSize: 31,
+      fontWeight: "700",
+      letterSpacing: -1.8,
+      color: C.ink,
+    },
+    headerRight: { flexDirection: "row", gap: 8, alignItems: "center" },
+    rutgers: {
+      fontFamily: serif,
+      fontSize: 22,
+      color: C.accent,
+      fontWeight: "700",
+    },
+    campusName: { fontSize: 11, color: C.muted },
+    demoBadge: {
+      fontSize: 8,
+      letterSpacing: 1,
+      backgroundColor: C.soft,
+      borderRadius: 5,
+      padding: 6,
+      color: C.muted,
+    },
+    content: { flex: 1 },
+    contentInner: { padding: 20, gap: 15, paddingBottom: 28 },
+    intro: { gap: 9, marginBottom: 2 },
+    title: {
+      fontFamily: serif,
+      fontSize: 32,
+      lineHeight: 39,
+      color: C.ink,
+      letterSpacing: -0.7,
+    },
+    subtitle: { fontSize: 11, color: C.muted, lineHeight: 18 },
+    visibilityPill: {
+      flexDirection: "row",
+      alignSelf: "flex-start",
+      alignItems: "center",
+      gap: 7,
+      backgroundColor: C.soft,
+      borderWidth: 1,
+      borderColor: C.line,
+      borderRadius: 10,
+      padding: 9,
+      marginTop: 5,
+    },
+    visibilityText: { fontSize: 10, color: C.accent },
+    filters: { gap: 7, paddingBottom: 2 },
+    mapCard: {
+      height: 430,
+      borderRadius: 20,
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: C.line,
+      backgroundColor: C.mapBase,
+    },
+    mapLabel: {
+      position: "absolute",
+      top: 13,
+      left: 12,
+      backgroundColor: C.surface,
+      borderRadius: 12,
+      padding: 11,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 9,
+      boxShadow: "0 2px 12px #00000022",
+    },
+    mapLabelTitle: { fontSize: 11, fontWeight: "600", color: C.ink },
+    mapLabelCopy: { fontSize: 8, color: C.muted, marginTop: 4 },
+    popup: {
+      position: "absolute",
+      left: 12,
+      right: 12,
+      bottom: 26,
+      backgroundColor: C.surface,
+      padding: 15,
+      borderRadius: 17,
+      gap: 12,
+      boxShadow: "0 4px 24px #00000022",
+    },
+    popupClose: {
+      position: "absolute",
+      top: 5,
+      right: 5,
+      padding: 7,
+      zIndex: 2,
+    },
+    popupPerson: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      paddingRight: 12,
+    },
+    personName: { fontSize: 14, fontWeight: "600", color: C.ink },
+    personMeta: { fontSize: 10, color: C.muted, lineHeight: 16, marginTop: 4 },
+    actions: { flexDirection: "row", gap: 9, marginTop: 3 },
+    listHeading: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginTop: 8,
+    },
+    sectionTitle: { fontSize: 14, fontWeight: "600", color: C.ink },
+    count: { fontSize: 11, color: C.accent },
+    finePrint: { fontSize: 10, lineHeight: 17, color: C.muted },
+    search: {
+      flexDirection: "row",
+      gap: 8,
+      alignItems: "center",
+      padding: 12,
+      borderWidth: 1,
+      borderColor: C.line,
+      borderRadius: 12,
+      backgroundColor: C.surface,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 12,
+      color: C.ink,
+      padding: 0,
+      minHeight: 22,
+    },
+    personCard: {
+      padding: 16,
+      borderWidth: 1,
+      borderColor: C.line,
+      borderRadius: 16,
+      backgroundColor: C.surface,
+      gap: 12,
+    },
+    cardTop: { flexDirection: "row", alignItems: "center", gap: 11 },
+    chipRow: { flexDirection: "row", gap: 7, flexWrap: "wrap", marginTop: 4 },
+    endNote: {
+      textAlign: "center",
+      fontFamily: serif,
+      fontStyle: "italic",
+      fontSize: 16,
+      color: C.muted,
+      marginVertical: 15,
+    },
+    tabBar: {
+      height: 67,
+      borderTopWidth: 1,
+      borderColor: C.line,
+      backgroundColor: C.surface,
+      flexDirection: "row",
+    },
+    tab: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 5,
+      borderTopWidth: 2,
+      borderTopColor: "transparent",
+    },
+    activeTab: { borderTopColor: C.primary },
+    tabText: { fontSize: 9, color: C.muted },
+    badge: {
+      position: "absolute",
+      top: 7,
+      right: "28%",
+      backgroundColor: C.soft,
+      paddingHorizontal: 5,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    badgeText: { color: C.accent, fontSize: 8, fontWeight: "600" },
+    connectionTabs: { flexDirection: "row", gap: 7, marginBottom: 8 },
+    profileContent: { gap: 9 },
+    profileCover: {
+      height: 100,
+      backgroundColor: C.cover,
+      borderRadius: 17,
+      overflow: "hidden",
+      alignItems: "flex-end",
+      justifyContent: "center",
+      paddingRight: 22,
+    },
+    coverCircle: {
+      position: "absolute",
+      height: 180,
+      width: 180,
+      borderRadius: 90,
+      borderWidth: 1,
+      borderColor: C.accent,
+      right: 30,
+      top: -100,
+    },
+    profileAvatar: { marginTop: -53, marginLeft: 18 },
+    profileName: {
+      fontFamily: serif,
+      fontSize: 30,
+      color: C.ink,
+      lineHeight: 36,
+      marginTop: 1,
+    },
+    profileBio: { fontSize: 12, lineHeight: 21, color: C.muted, marginTop: 12 },
+    profileSection: {
+      borderTopWidth: 1,
+      borderColor: C.line,
+      paddingTop: 18,
+      marginTop: 12,
+      gap: 13,
+    },
+    affiliation: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      backgroundColor: C.soft,
+      padding: 12,
+      borderRadius: 11,
+    },
+    clubText: { fontSize: 12, color: C.ink, fontWeight: "500", lineHeight: 19 },
+    experience: {
+      gap: 6,
+      borderLeftWidth: 2,
+      borderColor: C.line,
+      paddingLeft: 12,
+    },
+    privacyCard: {
+      backgroundColor: C.surface,
+      borderWidth: 1,
+      borderColor: C.line,
+      borderRadius: 16,
+      padding: 20,
+      gap: 12,
+      marginTop: 6,
+    },
+    smallTitle: { fontFamily: serif, fontSize: 25, color: C.ink },
+    bodyCopy: { fontSize: 12, lineHeight: 21, color: C.muted },
+    welcome: { padding: 25, gap: 19, paddingTop: 35 },
+    welcomeTitle: {
+      fontFamily: serif,
+      fontSize: 54,
+      color: C.ink,
+      lineHeight: 59,
+      letterSpacing: -1.5,
+    },
+    welcomeCopy: { fontSize: 12, lineHeight: 22, color: C.muted },
+    welcomeMap: {
+      height: 260,
+      borderRadius: 75,
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: C.line,
+      marginTop: 4,
+    },
+    welcomeNote: {
+      fontSize: 9,
+      lineHeight: 17,
+      textAlign: "center",
+      color: C.muted,
+      marginBottom: 15,
+    },
+    loadingText: { fontSize: 12, color: C.muted, marginTop: 18 },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: C.overlay,
+      justifyContent: "flex-end",
+      alignItems: "center",
+    },
+    sheet: {
+      width: "100%",
+      maxWidth: 520,
+      maxHeight: "94%",
+      backgroundColor: C.surface,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      overflow: "hidden",
+      boxShadow: "0 -8px 40px #00000022",
+    },
+    sheetHeader: {
+      paddingVertical: 17,
+      paddingHorizontal: 22,
+      borderBottomWidth: 1,
+      borderColor: C.line,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    sheetTitle: { fontSize: 14, fontWeight: "600", color: C.ink },
+    closeButton: { padding: 5 },
+    sheetBody: { padding: 22, paddingBottom: 30, gap: 17 },
+    field: { gap: 8, marginTop: 3 },
+    fieldLabel: {
+      fontSize: 12,
+      fontWeight: "500",
+      color: C.ink,
+      lineHeight: 19,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: C.line,
+      borderRadius: 11,
+      backgroundColor: C.surface,
+      padding: 13,
+      color: C.ink,
+      fontSize: 14,
+      minHeight: 47,
+    },
+    experienceFields: {
+      padding: 13,
+      gap: 12,
+      borderWidth: 1,
+      borderColor: C.line,
+      borderRadius: 12,
+      backgroundColor: C.soft,
+    },
+    textLink: { alignItems: "center", padding: 4 },
+    textLinkCopy: { fontSize: 11, color: C.accent, fontWeight: "500" },
+    audienceOption: {
+      flexDirection: "row",
+      gap: 11,
+      padding: 15,
+      borderWidth: 1,
+      borderColor: C.line,
+      borderRadius: 13,
+      alignItems: "center",
+    },
+    audienceSelected: { backgroundColor: C.soft, borderColor: C.accent },
+    notice: {
+      padding: 15,
+      backgroundColor: C.soft,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: C.line,
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 10,
+    },
+    noticeCopy: { fontSize: 11, lineHeight: 19, color: C.muted, flex: 1 },
+    blockedRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 9,
+    },
+    aboutSymbol: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: C.soft,
+      alignSelf: "center",
+      alignItems: "center",
+      justifyContent: "center",
+      marginVertical: 10,
+    },
+    toast: {
+      position: "absolute",
+      bottom: 85,
+      left: 20,
+      right: 20,
+      maxWidth: 480,
+      alignSelf: "center",
+      backgroundColor: C.primary,
+      borderRadius: 13,
+      padding: 15,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      boxShadow: "0 3px 20px #00000022",
+    },
+    toastText: { flex: 1, color: C.onPrimary, fontSize: 12, lineHeight: 18 },
+  });

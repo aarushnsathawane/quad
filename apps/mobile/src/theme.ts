@@ -1,18 +1,5 @@
 import { Platform } from "react-native";
-export const C = {
-  green: "#24523e",
-  ink: "#283e34",
-  muted: "#788572",
-  paper: "#f8f9f3",
-  white: "#fffefa",
-  line: "#e3e8da",
-  sage: "#edf3e3",
-  accent: "#85a162",
-  red: "#a84e43",
-};
-export const serif =
-  Platform.OS === "ios"
-    ? "Georgia"
-    : Platform.OS === "android"
-      ? "serif"
-      : "Georgia";
+export { ThemeProvider, useTheme, useThemedStyles } from "./ThemeProvider";
+export { SCHOOL } from "./theme-values";
+export type { Palette, ThemeMode } from "./theme-values";
+export const serif = Platform.OS === "android" ? "serif" : "Georgia";
