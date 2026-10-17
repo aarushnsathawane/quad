@@ -1,6 +1,8 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
+import MapControls from "./MapControls";
+import { CAMPUSES, campusFor, type CampusId } from "./campuses";
 import { CAMPUS } from "./data";
 import { useTheme, useThemedStyles, type Palette } from "./theme";
 import { Icon, Avatar } from "./ui";
@@ -18,11 +20,33 @@ export default function CampusMap({
   const { mode } = useTheme();
   const map = useRef<MapView>(null);
   const groups = groupsFor(people);
+  const [active, setActive] = useState<CampusId | "all">("all");
+  const [overview, setOverview] = useState(true);
+  const go = (id: CampusId | "all") => {
+    setActive(id);
+    const c = CAMPUSES.find((c) => c.id === id);
+    map.current?.animateToRegion(
+      c
+        ? {
+            latitude: c.lat,
+            longitude: c.lng,
+            latitudeDelta: 0.012,
+            longitudeDelta: 0.012,
+          }
+        : CAMPUS,
+      350,
+    );
+  };
   useEffect(() => {
     const p = people.find((x) => x.id === selected);
     if (p)
       map.current?.animateToRegion(
-        { ...CAMPUS, latitude: p.position.lat, longitude: p.position.lng },
+        {
+          latitudeDelta: 0.012,
+          longitudeDelta: 0.012,
+          latitude: p.position.lat,
+          longitude: p.position.lng,
+        },
         350,
       );
   }, [selected]);
@@ -38,84 +62,134 @@ export default function CampusMap({
         showsMyLocationButton={false}
         showsPointsOfInterests={false}
         rotateEnabled={false}
+        onRegionChangeComplete={(region) =>
+          setOverview(region.latitudeDelta > 0.035)
+        }
       >
-        {ungroupedPeople(people, groups).map((p) => (
-          <Marker
-            key={p.id}
-            coordinate={{ latitude: p.position.lat, longitude: p.position.lng }}
-            title={`${p.firstName} ${p.lastName}`}
-            description={p.major}
-            onPress={() => onSelect(p.id)}
-            tracksViewChanges={true}
-          >
-            <View
-              style={[
-                styles.pin,
-                selected === p.id && {
-                  borderColor: C.primary,
-                  backgroundColor: C.soft,
-                },
-              ]}
-            >
-              <Avatar person={p} size={40} />
-            </View>
-          </Marker>
-        ))}
-        {groups.map((g) => (
-          <Marker
-            key={g.id}
-            coordinate={{ latitude: g.position.lat, longitude: g.position.lng }}
-            title={g.title}
-            description={`${g.members.length} students · ${g.venue}`}
-            onPress={() => onGathering?.(g.id)}
-            tracksViewChanges={true}
-          >
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                backgroundColor: C.surface,
-                borderRadius: 28,
-                padding: 5,
-                borderWidth: 2,
-                borderColor: C.accent,
-              }}
-            >
-              {g.members.slice(0, 2).map((p, i) => (
-                <View key={p.id} style={{ marginLeft: i ? -12 : 0 }}>
-                  <Avatar person={p} size={36} />
-                </View>
-              ))}
-              <View
-                style={{
-                  backgroundColor: C.primary,
-                  width: 27,
-                  height: 27,
-                  borderRadius: 14,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginLeft: -6,
-                }}
+        {overview &&
+          CAMPUSES.map((c) => {
+            const members = people.filter(
+              (p) => campusFor(p.position).id === c.id,
+            );
+            return members.length ? (
+              <Marker
+                key={c.id}
+                coordinate={{ latitude: c.lat, longitude: c.lng }}
+                title={`${c.name} · ${members.length} students`}
+                onPress={() => go(c.id)}
               >
-                <Text
+                <View
                   style={{
-                    fontSize: 12,
-                    fontWeight: "700",
-                    color: C.onPrimary,
+                    backgroundColor: C.surface,
+                    padding: 3,
+                    borderRadius: 25,
+                    borderWidth: 2,
+                    borderColor: C.accent,
+                    flexDirection: "row",
+                    alignItems: "center",
                   }}
                 >
-                  {g.members.length}
-                </Text>
+                  <Avatar person={members[0]} size={30} />
+                  <Text
+                    style={{
+                      color: C.accent,
+                      paddingHorizontal: 4,
+                      fontWeight: "700",
+                      fontSize: 11,
+                    }}
+                  >
+                    {members.length}
+                  </Text>
+                </View>
+              </Marker>
+            ) : null;
+          })}
+        {!overview &&
+          ungroupedPeople(people, groups).map((p) => (
+            <Marker
+              key={p.id}
+              coordinate={{
+                latitude: p.position.lat,
+                longitude: p.position.lng,
+              }}
+              title={`${p.firstName} ${p.lastName}`}
+              description={p.major}
+              onPress={() => onSelect(p.id)}
+              tracksViewChanges={true}
+            >
+              <View
+                style={[
+                  styles.pin,
+                  selected === p.id && {
+                    borderColor: C.primary,
+                    backgroundColor: C.soft,
+                  },
+                ]}
+              >
+                <Avatar person={p} size={28} />
               </View>
-            </View>
-          </Marker>
-        ))}
+            </Marker>
+          ))}
+        {!overview &&
+          groups.map((g) => (
+            <Marker
+              key={g.id}
+              coordinate={{
+                latitude: g.position.lat,
+                longitude: g.position.lng,
+              }}
+              title={g.title}
+              description={`${g.members.length} students · ${g.venue}`}
+              onPress={() => onGathering?.(g.id)}
+              tracksViewChanges={true}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: C.surface,
+                  borderRadius: 28,
+                  padding: 3,
+                  borderWidth: 2,
+                  borderColor: C.accent,
+                }}
+              >
+                {g.members.slice(0, 1).map((p, i) => (
+                  <View key={p.id} style={{ marginLeft: i ? -12 : 0 }}>
+                    <Avatar person={p} size={26} />
+                  </View>
+                ))}
+                <View
+                  style={{
+                    backgroundColor: C.primary,
+                    width: 20,
+                    height: 20,
+                    borderRadius: 14,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginLeft: -6,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 10,
+                      fontWeight: "700",
+                      color: C.onPrimary,
+                    }}
+                  >
+                    {g.members.length}
+                  </Text>
+                </View>
+              </View>
+            </Marker>
+          ))}
       </MapView>
+      <MapControls active={active} onChange={go} />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Center on Rutgers campus"
         style={styles.center}
-        onPress={() => map.current?.animateToRegion(CAMPUS, 350)}
+        onPress={() => go("all")}
       >
         <Icon name="locate" size={21} />
       </Pressable>
@@ -126,8 +200,8 @@ export default function CampusMap({
 const createStyles = (C: Palette) =>
   StyleSheet.create({
     pin: {
-      width: 46,
-      height: 46,
+      width: 34,
+      height: 34,
       borderRadius: 23,
       borderWidth: 3,
       borderColor: C.surface,
@@ -139,7 +213,7 @@ const createStyles = (C: Palette) =>
     center: {
       position: "absolute",
       right: 13,
-      top: 16,
+      top: 64,
       borderRadius: 13,
       backgroundColor: C.surface,
       padding: 12,

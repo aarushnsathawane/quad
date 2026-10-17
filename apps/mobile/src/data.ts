@@ -32,9 +32,44 @@ const convert = (
 export const PEOPLE: Person[] = fixtures.people.map((p) => ({
   ...convert(p),
   id: p.id,
-  position: p.position,
+  position:
+    (
+      {
+        maya: { lat: 40.5212, lng: -74.464 },
+        sam: { lat: 40.5215, lng: -74.4635 },
+        daniel: { lat: 40.521, lng: -74.4643 },
+        emily: { lat: 40.484, lng: -74.436 },
+        priya: { lat: 40.4843, lng: -74.4365 },
+        leo: { lat: 40.4836, lng: -74.4355 },
+        ava: { lat: 40.523, lng: -74.4375 },
+        noah: { lat: 40.5215, lng: -74.4345 },
+        arjun: { lat: 40.5235, lng: -74.4605 },
+      } as Record<string, { lat: number; lng: number }>
+    )[p.id] || p.position,
   sampleConnections: p.id === "maya" ? ["sam"] : [],
 }));
+const additions = [
+  ["kiara", "Kiara", "Singh", 40.5224, -74.438, 2],
+  ["ben", "Ben", "Chen", 40.523, -74.4357, 3],
+  ["aisha", "Aisha", "Khan", 40.5196, -74.4605, 4],
+  ["ethan", "Ethan", "Reed", 40.5245, -74.4658, 5],
+  ["sofia", "Sofia", "Garcia", 40.4866, -74.4373, 6],
+  ["marcus", "Marcus", "Brown", 40.4807, -74.4329, 7],
+  ["nina", "Nina", "Shah", 40.5044, -74.4515, 8],
+  ["ryan", "Ryan", "Park", 40.4986, -74.4466, 9],
+] as const;
+for (const [id, firstName, lastName, lat, lng, avatar] of additions) {
+  PEOPLE.push({
+    ...PEOPLE[avatar % PEOPLE.length],
+    id,
+    firstName,
+    lastName,
+    avatar,
+    bio: "Always up for meeting new people around campus.",
+    position: { lat, lng },
+    sampleConnections: [],
+  });
+}
 export const CATALOG = fixtures.catalog;
 export function initialState(): State {
   return {
@@ -71,8 +106,8 @@ export function initialState(): State {
   };
 }
 export const CAMPUS = {
-  latitude: 40.5011,
-  longitude: -74.4495,
-  latitudeDelta: 0.012,
-  longitudeDelta: 0.012,
+  latitude: 40.504,
+  longitude: -74.449,
+  latitudeDelta: 0.062,
+  longitudeDelta: 0.062,
 };

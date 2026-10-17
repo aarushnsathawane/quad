@@ -13,12 +13,12 @@ export const GATHERINGS: Gathering[] = [
   {
     id: "build-night",
     title: "HackRU build night",
-    venue: "College Avenue Student Center",
+    venue: "Busch Student Center",
     description:
       "Bring a side project or a half-formed idea. A casual evening of building, swapping ideas, and meeting other makers.",
     interests: ["AI", "Startups", "Gaming"],
     memberIds: ["maya", "sam", "daniel"],
-    position: { lat: 40.5032, lng: -74.449 },
+    position: { lat: 40.5212, lng: -74.464 },
   },
   {
     id: "coffee-walk",
@@ -33,14 +33,24 @@ export const GATHERINGS: Gathering[] = [
   {
     id: "sunset-run",
     title: "Easy-paced campus run",
-    venue: "Voorhees Mall",
+    venue: "Passion Puddle · Cook/Douglass",
     description:
       "A friendly loop around campus. All paces welcome; hang out afterward and find your next running or hiking buddy.",
     interests: ["Running", "Hiking"],
     memberIds: ["emily", "priya", "leo"],
-    position: { lat: 40.5008, lng: -74.452 },
+    position: { lat: 40.484, lng: -74.436 },
   },
 ];
+GATHERINGS.push({
+  id: "livi-coffee",
+  title: "Coffee between classes",
+  venue: "Livingston Plaza",
+  description:
+    "A coffee break and a few new faces. Come hang out between lectures.",
+  interests: ["Coffee", "Music"],
+  memberIds: ["kiara", "ben"],
+  position: { lat: 40.5224, lng: -74.438 },
+});
 // Membership is explicit sample data, never inferred from someone's coordinates.
 // Always build groups from the already-filtered, privacy-eligible discovery result.
 export function groupsFor(people: Person[]): VisibleGathering[] {

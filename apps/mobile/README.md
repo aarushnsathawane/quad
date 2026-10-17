@@ -77,3 +77,9 @@ Map groups show explicitly assigned sample gatherings with a student count, venu
 ## Rutgers appearance
 
 The app uses Rutgers scarlet (`#CC0033`) with black/white surfaces. The sun/moon switch in the header toggles light and dark mode and saves the preference on this device, independently of profile/chat data. Appearance also applies to dialogs, chat, controls, illustrated map artwork, native map appearance, and status-bar text. The initial theme is light; a saved choice is restored before screens render. University branding is centralized in `src/theme-values.ts`; no school selector is added in this version.
+
+### Campus map and Pregame
+
+The web preview uses Leaflet and OpenStreetMap street tiles. Drag or pinch to move, use the zoom buttons, or jump to College Avenue, Busch, Livingston, or Cook/Douglass. Campus clusters expand into compact student and gathering markers as you zoom in. Twenty fictional students are distributed across those areas; discovery filters and blocks still determine which people and counts appear. Native apps use react-native-maps with matching campus navigation and compact markers. Map tiles need an internet connection; OSM attribution stays visible. For wider production traffic, configure a hosted tile provider under its usage terms.
+
+Pregame by Quad is the fourth tab, marked NEW. It includes sample public linkups across all four campus areas, plus Alex’s pre-frat invite and Jordan’s house-party invite. Open a card to join/undo an RSVP or accept/decline/undo an invite. Responses are stored separately in AsyncStorage (`@quad/pregame/v1`) and survive app reloads. Events, attendee counts, host invites and times are fictional demo content; no event is published and no host is notified.

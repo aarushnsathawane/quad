@@ -19,6 +19,7 @@ import * as SystemUI from "expo-system-ui";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import CampusMap from "./src/CampusMap";
 import Chat from "./src/Chat";
+import Pregame from "./src/Pregame";
 import { groupsFor, groupSummary } from "./src/gatherings";
 import { addMessage } from "./src/model";
 import { CATALOG, PEOPLE, initialState } from "./src/data";
@@ -46,7 +47,7 @@ import {
   ThemeProvider,
 } from "./src/theme";
 const STORAGE_KEY = "@quad/mobile-demo/v1";
-type Tab = "map" | "connections" | "profile";
+type Tab = "map" | "connections" | "profile" | "pregame";
 type Dialog =
   | "profile"
   | "edit"
@@ -112,6 +113,7 @@ function ThemeToggle() {
   );
 }
 function Quad() {
+  const contentScroll = useRef<ScrollView>(null);
   const C = useTheme().colors;
   const styles = useThemedStyles(createStyles);
 
@@ -385,49 +387,71 @@ function Quad() {
         ) : (
           <>
             <ScrollView
+              ref={contentScroll}
               style={styles.content}
               contentContainerStyle={styles.contentInner}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              <View style={styles.intro}>
-                <Label>
-                  {tab === "map"
-                    ? "Your campus, connected"
-                    : tab === "connections"
-                      ? "A few familiar faces"
-                      : "A little more you"}
-                </Label>
-                <Text style={styles.title}>
-                  {tab === "map"
-                    ? "Find your people."
-                    : tab === "connections"
-                      ? "Your campus circle."
-                      : "Your corner of campus."}
-                </Text>
-                <Text style={styles.subtitle}>
-                  {tab === "map"
-                    ? "A little common ground. A good reason to say hello."
-                    : tab === "connections"
-                      ? "Good conversations don’t have to end here."
-                      : "Keep it casual. Give someone a reason to say hello."}
-                </Text>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => setDialog("visibility")}
-                  style={styles.visibilityPill}
-                >
-                  <Icon name={sharing ? "shield" : "ghost"} size={15} />
-                  <Text style={styles.visibilityText}>
-                    {sharing
-                      ? "You’re visible"
-                      : enabled
-                        ? "Presence paused"
-                        : "Ghost Mode is on"}
+              {tab !== "pregame" && (
+                <View style={styles.intro}>
+                  <Label>
+                    {tab === "map"
+                      ? "Your campus, connected"
+                      : tab === "connections"
+                        ? "A few familiar faces"
+                        : "A little more you"}
+                  </Label>
+                  <Text style={styles.title}>
+                    {tab === "map"
+                      ? "Find your people."
+                      : tab === "connections"
+                        ? "Your campus circle."
+                        : "Your corner of campus."}
                   </Text>
-                  <Icon name="settings" size={13} />
-                </Pressable>
-              </View>
+                  <Text style={styles.subtitle}>
+                    {tab === "map"
+                      ? "A little common ground. A good reason to say hello."
+                      : tab === "connections"
+                        ? "Good conversations don’t have to end here."
+                        : "Keep it casual. Give someone a reason to say hello."}
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setDialog("visibility")}
+                    style={styles.visibilityPill}
+                  >
+                    <Icon name={sharing ? "shield" : "ghost"} size={15} />
+                    <Text style={styles.visibilityText}>
+                      {sharing
+                        ? "You’re visible"
+                        : enabled
+                          ? "Presence paused"
+                          : "Ghost Mode is on"}
+                    </Text>
+                    <Icon name="settings" size={13} />
+                  </Pressable>
+                </View>
+              )}
+              {tab === "pregame" && (
+                <View style={{ gap: 18 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "baseline",
+                      gap: 6,
+                    }}
+                  >
+                    <Text style={[styles.title, { fontSize: 32 }]}>
+                      Pregame
+                    </Text>
+                    <Text style={{ color: C.muted, fontSize: 12 }}>
+                      by Quad
+                    </Text>
+                  </View>
+                  <Pregame />
+                </View>
+              )}
               {tab === "map" && (
                 <>
                   <ScrollView
@@ -462,15 +486,6 @@ function Quad() {
                       onSelect={setSelected}
                       onGathering={openGathering}
                     />
-                    <View pointerEvents="none" style={styles.mapLabel}>
-                      <Icon name="profile" size={19} />
-                      <View>
-                        <Text style={styles.mapLabelTitle}>College Avenue</Text>
-                        <Text style={styles.mapLabelCopy}>
-                          Rutgers University
-                        </Text>
-                      </View>
-                    </View>
                     {current && (
                       <View style={styles.popup}>
                         <Pressable
@@ -517,7 +532,7 @@ function Quad() {
                   </View>
                   <View style={styles.listHeading}>
                     <Text style={styles.sectionTitle}>
-                      Around you{" "}
+                      Around Rutgers{" "}
                       <Text style={styles.count}>{people.length}</Text>
                     </Text>
                     <Text style={styles.finePrint}>Sample campus</Text>
@@ -718,6 +733,7 @@ function Quad() {
                   { id: "map", icon: "map", label: "Map" },
                   { id: "connections", icon: "users", label: "Connections" },
                   { id: "profile", icon: "profile", label: "Profile" },
+                  { id: "pregame", icon: "spark", label: "Pregame by Quad" },
                 ] as const
               ).map((t) => (
                 <Pressable
@@ -726,6 +742,7 @@ function Quad() {
                   accessibilityState={{ selected: tab === t.id }}
                   accessibilityLabel={t.label}
                   onPress={() => {
+                    contentScroll.current?.scrollTo({ y: 0, animated: false });
                     setTab(t.id);
                     setSelected(null);
                   }}
@@ -744,6 +761,31 @@ function Quad() {
                   >
                     {t.label}
                   </Text>
+                  {t.id === "pregame" && (
+                    <View
+                      style={[
+                        styles.badge,
+                        {
+                          top: 3,
+                          right: 5,
+                          backgroundColor: C.primary,
+                          paddingHorizontal: 4,
+                          borderRadius: 4,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={{
+                          color: C.onPrimary,
+                          fontSize: 7,
+                          fontWeight: "800",
+                          letterSpacing: 0.5,
+                        }}
+                      >
+                        NEW
+                      </Text>
+                    </View>
+                  )}
                   {t.id === "connections" && received > 0 && (
                     <View style={styles.badge}>
                       <Text style={styles.badgeText}>{received}</Text>
