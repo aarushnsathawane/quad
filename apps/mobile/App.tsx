@@ -20,6 +20,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import CampusMap from "./src/CampusMap";
 import Chat from "./src/Chat";
 import Pregame from "./src/Pregame";
+import PregameLogo from "./src/PregameLogo";
 import { groupsFor, groupSummary } from "./src/gatherings";
 import { addMessage } from "./src/model";
 import { CATALOG, PEOPLE, initialState } from "./src/data";
@@ -435,20 +436,7 @@ function Quad() {
               )}
               {tab === "pregame" && (
                 <View style={{ gap: 18 }}>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "baseline",
-                      gap: 6,
-                    }}
-                  >
-                    <Text style={[styles.title, { fontSize: 32 }]}>
-                      Pregame
-                    </Text>
-                    <Text style={{ color: C.muted, fontSize: 12 }}>
-                      by Quad
-                    </Text>
-                  </View>
+                  <PregameLogo />
                   <Pregame />
                 </View>
               )}
@@ -733,7 +721,7 @@ function Quad() {
                   { id: "map", icon: "map", label: "Map" },
                   { id: "connections", icon: "users", label: "Connections" },
                   { id: "profile", icon: "profile", label: "Profile" },
-                  { id: "pregame", icon: "spark", label: "Pregame by Quad" },
+                  { id: "pregame", icon: "spark", label: "Pregame" },
                 ] as const
               ).map((t) => (
                 <Pressable
