@@ -1,43 +1,28 @@
-# Quad data model — implemented demo
+# Quad production data model
 
-The original brief remains the product direction. The schema in `server/schema.sql` is a small local implementation of the proposed relational model.
+The current production schema is the versioned migration in `backend/migrations/001-initial.sql`. The older normalized demo schema in `server/schema.sql` is retained only for the original loopback web demo; the production service neither opens nor migrates that demo database.
 
-| Table | Purpose | Relationships and constraints |
-| --- | --- | --- |
-| universities | Campus identity and email-domain configuration | One university to many users, programs, organizations |
-| users | Private identity, campus, verification and account status | Unique email; verification is simulated for seed users |
-| academic_programs | Consistent major/minor names | University-scoped unique name |
-| profiles | Public name, academic identity, bio, avatar, social links | One per user; major and optional minor references |
-| tags | Curated interests and hobbies | Unique name |
-| profile_tags | Student tag choices | Unique user/tag; interest or hobby kind |
-| organizations | Campus clubs, teams, labs | University-scoped unique name |
-| profile_organizations | Self-reported affiliation | Unique user/organization |
-| experiences | Casual professional/project context | Many per profile; ordered |
-| visibility_settings | Audience and expiry | One per user; university, connections, nobody |
-| user_locations | Latest private location | At most one row per user; no movement history |
-| connections | Pending requests and accepted relationships | Ordered unique user pair; initiator must be a participant |
-| blocks | Directed block declarations | Unique non-self pair; enforcement is bidirectional |
-| reports | Private abuse reports | Reporter and subject retained as nullable references |
+| Entity/table | Stored fields and relationships                                                                                                                                        | Privacy and scope                                                                                                                                                                                                                                 |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| users        | UUID, unique approved school email, verification timestamp, validated profile JSON, onboarding/account status, creation/consent timestamps and accepted policy version | Single Rutgers pilot. Private identity is never included in peer profiles. Profile JSON holds names, major/year, bio, avatar selection, interests, self-reported organizations and small experience records. Membership claims are self-reported. |
+| login_codes  | Email, random challenge nonce, keyed digest, expiry, issue time and attempt count                                                                                      | Never plaintext codes. Single-use; 10-minute expiry, five guesses, per-email and IP limits.                                                                                                                                                       |
+| sessions     | SHA-256 digest of a random 256-bit token, user FK, expiry/creation                                                                                                     | Revocable and durable. Tokens live in native SecureStore or HTTP-only secure browser cookies; no token values in the database.                                                                                                                    |
+| visibility   | One row per user, audience, optional expiry, latest coarse grid cell and freshness timestamp                                                                           | Ghost Mode by default. Only coarse cells (~300–400m) are retained. No GPS history or raw coordinate storage. Consent duration and 15-minute freshness are separate controls.                                                                      |
+| connections  | Ordered unique user pair, initiator, pending/connected status, creation                                                                                                | Prevents self/duplicate edges. Only a pending request recipient accepts. Relationship direction is derived.                                                                                                                                       |
+| blocks       | Directed unique non-self user pair                                                                                                                                     | Enforced in both directions for discovery, connections, messages and events. Blocking removes the connection and pair-specific invites/RSVPs. Unblocking does not restore them.                                                                   |
+| messages     | UUID/idempotency key, sender/recipient user FKs, body, creation                                                                                                        | Accepted unblocked connections only. Bounded cursor-based reads. Retained 90 days, not end-to-end encrypted.                                                                                                                                      |
+| events       | Host FK, title, campus area, venue, start/end, public/invite visibility, category, description, cancellation/creation                                                  | Private events are returned only to the host and invited members; blocks and suspensions also apply. Ended events expire from the feed and are removed after 30 days.                                                                             |
+| invites      | Unique event/user pair                                                                                                                                                 | Hosts invite accepted connections only. No inferred invitation or automatic acceptance.                                                                                                                                                           |
+| rsvps        | Unique event/user pair, going/declined                                                                                                                                 | Only authorized viewers of an active event can respond; cancellation or removal revokes access. Counts exclude inactive/blocked students for the viewer.                                                                                          |
+| reports      | Reporter/subject nullable FKs or event FK, reason/details, status/creation                                                                                             | Protected moderator queue only. Own reports appear in account export; other reporters are not exposed. Account deletion clears user references. Retained up to 180 days.                                                                          |
+| audit        | Actor ID, action, subject identifier, timestamp                                                                                                                        | Operational moderation records, 180-day retention. No raw request bodies, messages, locations or credentials are logged.                                                                                                                          |
+| throttle     | Hashed email-based key, count and reset time                                                                                                                           | Persistent email abuse limits; expired buckets are removed. Network/account request limits are bounded in memory.                                                                                                                                 |
+| migrations   | Migration filename/checksum/application time                                                                                                                           | Transactional schema upgrades; prevents silently editing an applied migration.                                                                                                                                                                    |
 
-## Derived values
+Foreign keys cascade personal profile relationships, messages, sessions and hosted events on account deletion. Reports retain evidence with user references cleared; encrypted backups can contain a deleted account until the 30-day backup-retention window ends.
 
-Visibility, similarities, mutual connection counts, and request direction are calculated. They are not separate persistent records. Email and raw location do not appear in public profile responses.
+## Derived and intentionally absent
 
-The backend permits location discovery only when both accounts are active and verified at the same university, neither has blocked the other, the target audience permits the viewer, the sharing expiry is in the future or absent, and location freshness is under 15 minutes. The demo additionally scopes coordinates to College Avenue.
+Connection direction, similarities, attendance counts, current visibility and map coordinates are derived at read time. No full movement history, precise location tier, background tracking, Close Friends, enrollment records, classes, uploads or advertisement/analytics identifiers are stored. A school inbox confirms mailbox control, not identity/current enrollment.
 
-## Deliberate demo simplifications
-
-- Authentication is a clearly labeled single-user demo session, never a production credential.
-- Seed users have fictional email addresses and simulated verification timestamps.
-- Profile photos use original illustrated avatars; no storage/upload service.
-- A minor field and hobby kind exist in the schema, but the current editor combines interests/hobbies and omits minor selection.
-- Experience kinds and academic major/minor eligibility flags are deferred in this demo.
-- Single major and optional single minor; no enrollment records.
-- Closest-user ranking, spatial indexes, geographic tiles, classes, and Close Friends are deferred.
-- The demo uses bounded in-process relationship queries. Real campus scale needs batched joins and indexed spatial queries.
-- Reports have a stored status, but no review interface.
-- No migration framework yet: the initial schema is idempotent for an unchanged structure. Introduce versioned migrations before changing existing tables.
-
-## Privacy limits
-
-Simple coordinate rounding is not a complete privacy mechanism. A production design must address repeated queries, cell boundaries, timing, approximate-distance leakage, abuse limits, and revocation. The demo's synthetic map and users let the interaction be reviewed without exposing real students.
+For this single-university pilot, a validated profile JSON object keeps optional, small fields simple. Common security/relationship/event records remain separately indexed relational tables. Introduce a university FK and normalized catalogs only when another university or meaningful filtering/analytics requirements justify that migration. The client may show catalog suggestions, but those choices do not certify club membership.

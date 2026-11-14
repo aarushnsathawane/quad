@@ -1,28 +1,24 @@
-import { useRef, useEffect, useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
-import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
-import MapControls from "./MapControls";
-import { CAMPUSES, campusFor, type CampusId } from "./campuses";
-import { CAMPUS } from "./data";
-import { useTheme, useThemedStyles, type Palette } from "./theme";
-import { Icon, Avatar } from "./ui";
-import { groupsFor, ungroupedPeople } from "./gatherings";
-import type { MapProps } from "./map-types";
-export default function CampusMap({
-  people,
-  selected,
-  onSelect,
-  onGathering,
-}: MapProps) {
+import { DEMO } from './service';
+import { useRef, useEffect, useState } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+import MapControls from './MapControls';
+import { CAMPUSES, campusFor, type CampusId } from './campuses';
+import { CAMPUS } from './data';
+import { useTheme, useThemedStyles, type Palette } from './theme';
+import { Icon, Avatar } from './ui';
+import { groupsFor, ungroupedPeople } from './gatherings';
+import type { MapProps } from './map-types';
+export default function CampusMap({ people, selected, onSelect, onGathering }: MapProps) {
   const C = useTheme().colors;
   const styles = useThemedStyles(createStyles);
 
   const { mode } = useTheme();
   const map = useRef<MapView>(null);
   const groups = groupsFor(people);
-  const [active, setActive] = useState<CampusId | "all">("all");
+  const [active, setActive] = useState<CampusId | 'all'>('all');
   const [overview, setOverview] = useState(true);
-  const go = (id: CampusId | "all") => {
+  const go = (id: CampusId | 'all') => {
     setActive(id);
     const c = CAMPUSES.find((c) => c.id === id);
     map.current?.animateToRegion(
@@ -62,15 +58,11 @@ export default function CampusMap({
         showsMyLocationButton={false}
         showsPointsOfInterests={false}
         rotateEnabled={false}
-        onRegionChangeComplete={(region) =>
-          setOverview(region.latitudeDelta > 0.035)
-        }
+        onRegionChangeComplete={(region) => setOverview(region.latitudeDelta > 0.035)}
       >
         {overview &&
           CAMPUSES.map((c) => {
-            const members = people.filter(
-              (p) => campusFor(p.position).id === c.id,
-            );
+            const members = people.filter((p) => campusFor(p.position).id === c.id);
             return members.length ? (
               <Marker
                 key={c.id}
@@ -85,8 +77,8 @@ export default function CampusMap({
                     borderRadius: 25,
                     borderWidth: 2,
                     borderColor: C.accent,
-                    flexDirection: "row",
-                    alignItems: "center",
+                    flexDirection: 'row',
+                    alignItems: 'center',
                   }}
                 >
                   <Avatar person={members[0]} size={30} />
@@ -94,7 +86,7 @@ export default function CampusMap({
                     style={{
                       color: C.accent,
                       paddingHorizontal: 4,
-                      fontWeight: "700",
+                      fontWeight: '700',
                       fontSize: 11,
                     }}
                   >
@@ -145,8 +137,8 @@ export default function CampusMap({
             >
               <View
                 style={{
-                  flexDirection: "row",
-                  alignItems: "center",
+                  flexDirection: 'row',
+                  alignItems: 'center',
                   backgroundColor: C.surface,
                   borderRadius: 28,
                   padding: 3,
@@ -165,15 +157,15 @@ export default function CampusMap({
                     width: 20,
                     height: 20,
                     borderRadius: 14,
-                    alignItems: "center",
-                    justifyContent: "center",
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     marginLeft: -6,
                   }}
                 >
                   <Text
                     style={{
                       fontSize: 10,
-                      fontWeight: "700",
+                      fontWeight: '700',
                       color: C.onPrimary,
                     }}
                   >
@@ -189,11 +181,13 @@ export default function CampusMap({
         accessibilityRole="button"
         accessibilityLabel="Center on Rutgers campus"
         style={styles.center}
-        onPress={() => go("all")}
+        onPress={() => go('all')}
       >
         <Icon name="locate" size={21} />
       </Pressable>
-      <Text style={styles.caption}>Tap a group · Sample gatherings</Text>
+      <Text style={styles.caption}>
+        {DEMO ? 'Tap a group · Sample gatherings' : 'Approximate campus locations'}
+      </Text>
     </View>
   );
 }
@@ -206,21 +200,21 @@ const createStyles = (C: Palette) =>
       borderWidth: 3,
       borderColor: C.surface,
       backgroundColor: C.soft,
-      alignItems: "center",
-      justifyContent: "center",
+      alignItems: 'center',
+      justifyContent: 'center',
     },
-    initials: { fontSize: 13, fontWeight: "600", color: C.accent },
+    initials: { fontSize: 13, fontWeight: '600', color: C.accent },
     center: {
-      position: "absolute",
+      position: 'absolute',
       right: 13,
       top: 64,
       borderRadius: 13,
       backgroundColor: C.surface,
       padding: 12,
-      boxShadow: "0 2px 8px #00000022",
+      boxShadow: '0 2px 8px #00000022',
     },
     caption: {
-      position: "absolute",
+      position: 'absolute',
       bottom: 8,
       right: 8,
       fontSize: 8,

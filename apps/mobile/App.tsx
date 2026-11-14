@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   AppState,
@@ -12,18 +12,20 @@ import {
   Text,
   TextInput,
   View,
-} from "react-native";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { StatusBar } from "expo-status-bar";
-import * as SystemUI from "expo-system-ui";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import CampusMap from "./src/CampusMap";
-import Chat from "./src/Chat";
-import Pregame from "./src/Pregame";
-import PregameLogo from "./src/PregameLogo";
-import { groupsFor, groupSummary } from "./src/gatherings";
-import { addMessage } from "./src/model";
-import { CATALOG, PEOPLE, initialState } from "./src/data";
+} from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import CampusMap from './src/CampusMap';
+import Chat from './src/Chat';
+import Pregame from './src/Pregame';
+import PregameLogo from './src/PregameLogo';
+import { ServiceProvider, useService, DEMO } from './src/service';
+import AccountSettings from './src/AccountSettings';
+import { groupsFor, groupSummary } from './src/gatherings';
+import { addMessage } from './src/model';
+import { CATALOG, PEOPLE as DEMO_PEOPLE, initialState } from './src/data';
 import {
   blockPerson,
   canDiscover,
@@ -38,36 +40,32 @@ import {
   type Person,
   type Profile,
   type State,
-} from "./src/model";
-import { Avatar, Button, Chip, Empty, Icon, Label, Reason } from "./src/ui";
-import {
-  useTheme,
-  useThemedStyles,
-  type Palette,
-  serif,
-  ThemeProvider,
-} from "./src/theme";
-const STORAGE_KEY = "@quad/mobile-demo/v1";
-type Tab = "map" | "connections" | "profile" | "pregame";
+} from './src/model';
+import { Avatar, Button, Chip, Empty, Icon, Label, Reason } from './src/ui';
+import { useTheme, useThemedStyles, type Palette, serif, ThemeProvider } from './src/theme';
+const STORAGE_KEY = '@quad/mobile-demo/v1';
+type Tab = 'map' | 'connections' | 'profile' | 'pregame';
 type Dialog =
-  | "profile"
-  | "edit"
-  | "visibility"
-  | "report"
-  | "block"
-  | "disconnect"
-  | "chat"
-  | "gathering"
-  | "about"
+  | 'profile'
+  | 'edit'
+  | 'visibility'
+  | 'report'
+  | 'block'
+  | 'disconnect'
+  | 'chat'
+  | 'gathering'
+  | 'about'
   | null;
-type Filter = "everyone" | "interests" | "clubs" | "connections";
+type Filter = 'everyone' | 'interests' | 'clubs' | 'connections';
 
 export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
         <ThemedStatusBar />
-        <Quad />
+        <ServiceProvider>
+          <Quad />
+        </ServiceProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );
@@ -77,35 +75,31 @@ function ThemedStatusBar() {
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(colors.paper).catch(() => {});
   }, [colors.paper]);
-  return <StatusBar style={mode === "dark" ? "light" : "dark"} />;
+  return <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />;
 }
 function ThemeToggle() {
   const { mode, colors, changing, toggleMode } = useTheme();
   return (
     <View
       style={{
-        flexDirection: "row",
-        alignItems: "center",
+        flexDirection: 'row',
+        alignItems: 'center',
         gap: 2,
         marginLeft: 2,
       }}
     >
-      <Icon
-        name={mode === "dark" ? "moon" : "sun"}
-        size={15}
-        color={colors.accent}
-      />
+      <Icon name={mode === 'dark' ? 'moon' : 'sun'} size={15} color={colors.accent} />
       <Switch
         accessibilityRole="switch"
         accessibilityLabel="Dark mode"
         accessibilityHint="Switch between light and dark appearance"
-        value={mode === "dark"}
+        value={mode === 'dark'}
         onValueChange={() => toggleMode()}
         disabled={changing}
-        trackColor={{ false: "#C9CBD1", true: colors.primary }}
+        trackColor={{ false: '#C9CBD1', true: colors.primary }}
         thumbColor="#FFFFFF"
-        {...(Platform.OS === "web"
-          ? { activeThumbColor: "#FFFFFF", activeTrackColor: colors.primary }
+        {...(Platform.OS === 'web'
+          ? { activeThumbColor: '#FFFFFF', activeTrackColor: colors.primary }
           : {})}
         ios_backgroundColor={colors.line}
         style={{ transform: [{ scale: 0.8 }] }}
@@ -114,24 +108,28 @@ function ThemeToggle() {
   );
 }
 function Quad() {
+  const service = useService();
+  const PEOPLE = DEMO ? DEMO_PEOPLE : service.snapshot!.people;
   const contentScroll = useRef<ScrollView>(null);
   const C = useTheme().colors;
   const styles = useThemedStyles(createStyles);
 
-  const [state, setState] = useState<State>(initialState),
-    [ready, setReady] = useState(false),
+  const [state, setState] = useState<State>(() =>
+      DEMO ? initialState() : service.snapshot!.state,
+    ),
+    [ready, setReady] = useState(!DEMO),
     [saving, setSaving] = useState(false),
-    [toast, setToast] = useState("");
-  const [tab, setTab] = useState<Tab>("map"),
+    [toast, setToast] = useState('');
+  const [tab, setTab] = useState<Tab>('map'),
     [dialog, setDialog] = useState<Dialog>(null),
     [selected, setSelected] = useState<string | null>(null),
     [gatheringId, setGatheringId] = useState<string | null>(null),
     [subject, setSubject] = useState<string | null>(null),
-    [filter, setFilter] = useState<Filter>("everyone"),
-    [search, setSearch] = useState(""),
-    [connectionTab, setConnectionTab] = useState<
-      "connected" | "incoming" | "outgoing"
-    >("connected"),
+    [filter, setFilter] = useState<Filter>('everyone'),
+    [search, setSearch] = useState(''),
+    [connectionTab, setConnectionTab] = useState<'connected' | 'incoming' | 'outgoing'>(
+      'connected',
+    ),
     [now, setNow] = useState(Date.now());
   const working = useRef(false);
   const { mode, colors, error: themeError } = useTheme();
@@ -139,23 +137,21 @@ function Quad() {
     if (themeError) setToast(themeError);
   }, [themeError]);
   useEffect(() => {
-    if (Platform.OS === "web" && typeof document !== "undefined") {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
       document.documentElement.style.colorScheme = mode;
       const meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute("content", colors.paper);
+      if (meta) meta.setAttribute('content', colors.paper);
     }
   }, [mode, colors]);
   useEffect(() => {
+    if (!DEMO) return;
     let cancelled = false;
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         if (raw && !cancelled) setState(parseSavedState(raw));
       } catch {
-        if (!cancelled)
-          setToast(
-            "Saved demo data could not be loaded. A fresh preview is shown.",
-          );
+        if (!cancelled) setToast('Saved demo data could not be loaded. A fresh preview is shown.');
       } finally {
         if (!cancelled) setReady(true);
       }
@@ -165,9 +161,12 @@ function Quad() {
     };
   }, []);
   useEffect(() => {
+    if (!DEMO && service.snapshot && !working.current) setState(service.snapshot.state);
+  }, [service.snapshot]);
+  useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
-    const subscription = AppState.addEventListener("change", (value) => {
-      if (value === "active") setNow(Date.now());
+    const subscription = AppState.addEventListener('change', (value) => {
+      if (value === 'active') setNow(Date.now());
     });
     return () => {
       clearInterval(timer);
@@ -176,7 +175,7 @@ function Quad() {
   }, []);
   useEffect(() => {
     if (!toast) return;
-    const timer = setTimeout(() => setToast(""), 5500);
+    const timer = setTimeout(() => setToast(''), 5500);
     return () => clearTimeout(timer);
   }, [toast]);
   const update = async (transform: (s: State) => State, message?: string) => {
@@ -185,14 +184,17 @@ function Quad() {
     setSaving(true);
     try {
       const next = transform(state);
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      setState(next);
+      if (DEMO) {
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        setState(next);
+      } else {
+        const saved = await service.commit(state, next);
+        setState(saved.state);
+      }
       if (message) setToast(message);
       return true;
     } catch (e) {
-      setToast(
-        e instanceof Error ? e.message : "Could not save. Please try again.",
-      );
+      setToast(e instanceof Error ? e.message : 'Could not save. Please try again.');
       return false;
     } finally {
       working.current = false;
@@ -201,7 +203,7 @@ function Quad() {
   };
   const discoverable = useMemo(
     () => PEOPLE.filter((p) => canDiscover(state, p.id)),
-    [state.blocked],
+    [state.blocked, PEOPLE],
   );
   const people = useMemo(
     () =>
@@ -211,16 +213,13 @@ function Quad() {
           return (
             (!q ||
               [p.firstName, p.lastName, p.major, ...p.interests, ...p.clubs]
-                .join(" ")
+                .join(' ')
                 .toLowerCase()
                 .includes(q)) &&
-            (filter === "everyone" ||
-              (filter === "connections" &&
-                state.connections[p.id] === "connected") ||
-              (filter === "clubs" &&
-                p.clubs.some((c) => state.me.clubs.includes(c))) ||
-              (filter === "interests" &&
-                p.interests.some((i) => state.me.interests.includes(i))))
+            (filter === 'everyone' ||
+              (filter === 'connections' && state.connections[p.id] === 'connected') ||
+              (filter === 'clubs' && p.clubs.some((c) => state.me.clubs.includes(c))) ||
+              (filter === 'interests' && p.interests.some((i) => state.me.interests.includes(i))))
           );
         })
         .sort(
@@ -231,50 +230,43 @@ function Quad() {
         ),
     [discoverable, search, filter, state.me, state.connections],
   );
-  const gatherings = groupsFor(people);
+  const gatherings = DEMO ? groupsFor(people) : [];
   const gathering = gatherings.find((g) => g.id === gatheringId);
   const openGathering = (id: string) => {
     setSelected(null);
     setGatheringId(id);
-    setDialog("gathering");
+    setDialog('gathering');
   };
   const openChat = (p: Person) => {
     setSubject(p.id);
-    setDialog("chat");
+    setDialog('chat');
   };
   const current = people.find((p) => p.id === selected);
   const person = PEOPLE.find((p) => p.id === subject);
-  const received = discoverable.filter(
-    (p) => state.connections[p.id] === "incoming",
-  ).length;
+  const received = discoverable.filter((p) => state.connections[p.id] === 'incoming').length;
   const sharing = isVisible(state.visibility, now);
   const enabled =
-    state.visibility.audience !== "nobody" &&
+    state.visibility.audience !== 'nobody' &&
     (state.visibility.until === null || state.visibility.until > now);
   const showPerson = (p: Person) => {
     setSubject(p.id);
-    setDialog("profile");
+    setDialog('profile');
   };
   const connect = async (p: Person) => {
     const status = state.connections[p.id];
-    if (status === "connected") {
+    if (status === 'connected') {
       setSubject(p.id);
-      setDialog("disconnect");
+      setDialog('disconnect');
       return;
     }
-    const action =
-      status === "incoming"
-        ? "accept"
-        : status === "outgoing"
-          ? "remove"
-          : "request";
+    const action = status === 'incoming' ? 'accept' : status === 'outgoing' ? 'remove' : 'request';
     await update(
       (s) => connectionAction(s, p.id, action),
-      action === "request"
+      action === 'request'
         ? `Request sent to ${p.firstName}.`
-        : action === "accept"
+        : action === 'accept'
           ? `You and ${p.firstName} are connected.`
-          : "Request withdrawn.",
+          : 'Request withdrawn.',
     );
   };
   const connectionButton = (p: Person) => {
@@ -283,16 +275,16 @@ function Quad() {
       <Button
         disabled={saving}
         onPress={() => connect(p)}
-        secondary={status === "outgoing" || status === "connected"}
-        icon={status ? "check" : "plus"}
+        secondary={status === 'outgoing' || status === 'connected'}
+        icon={status ? 'check' : 'plus'}
       >
-        {status === "connected"
-          ? "Connected"
-          : status === "incoming"
-            ? "Accept request"
-            : status === "outgoing"
-              ? "Cancel request"
-              : "Connect"}
+        {status === 'connected'
+          ? 'Connected'
+          : status === 'incoming'
+            ? 'Accept request'
+            : status === 'outgoing'
+              ? 'Cancel request'
+              : 'Connect'}
       </Button>
     );
   };
@@ -304,17 +296,17 @@ function Quad() {
       </SafeAreaView>
     );
   return (
-    <SafeAreaView edges={["top", "bottom"]} style={styles.root}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.root}>
       <View
         style={styles.frame}
-        importantForAccessibility={dialog ? "no-hide-descendants" : "auto"}
+        importantForAccessibility={dialog ? 'no-hide-descendants' : 'auto'}
         aria-hidden={dialog !== null}
       >
         <View style={styles.header}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Quad home"
-            onPress={() => setTab("map")}
+            onPress={() => setTab('map')}
             style={styles.brand}
           >
             <View style={styles.logo}>
@@ -329,10 +321,10 @@ function Quad() {
             <Text style={styles.campusName}>Rutgers</Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="About this demo"
-              onPress={() => setDialog("about")}
+              accessibilityLabel={DEMO ? 'About this demo' : 'About Quad'}
+              onPress={() => setDialog('about')}
             >
-              <Text style={styles.demoBadge}>DEMO</Text>
+              <Text style={styles.demoBadge}>{DEMO ? 'DEMO' : 'RUTGERS'}</Text>
             </Pressable>
             <ThemeToggle />
           </View>
@@ -340,37 +332,26 @@ function Quad() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="University-only access: school email required. Learn more."
-          onPress={() => setDialog("about")}
+          onPress={() => setDialog('about')}
           style={styles.campusAccess}
         >
           <Icon name="shield" size={12} color={C.accent} />
-          <Text style={styles.campusAccessText}>
-            University-only · School email required
-          </Text>
+          <Text style={styles.campusAccessText}>University-only · School email required</Text>
           <Icon name="arrow" size={11} color={C.muted} />
         </Pressable>
         {!state.entered ? (
-          <ScrollView
-            contentContainerStyle={styles.welcome}
-            showsVerticalScrollIndicator={false}
-          >
+          <ScrollView contentContainerStyle={styles.welcome} showsVerticalScrollIndicator={false}>
             <Label>A smaller world starts here</Label>
             <Text style={styles.welcomeTitle}>
-              Your campus.{`\n`}Your{" "}
-              <Text style={{ color: C.accent, fontStyle: "italic" }}>
-                people.
-              </Text>
+              Your campus.{`\n`}Your{' '}
+              <Text style={{ color: C.accent, fontStyle: 'italic' }}>people.</Text>
             </Text>
             <Text style={styles.welcomeCopy}>
-              There’s a good conversation around every corner. Find the people
-              you already have something in common with.
+              There’s a good conversation around every corner. Find the people you already have
+              something in common with.
             </Text>
             <View style={styles.welcomeMap}>
-              <CampusMap
-                people={PEOPLE.slice(0, 7)}
-                selected={null}
-                onSelect={() => {}}
-              />
+              <CampusMap people={PEOPLE.slice(0, 7)} selected={null} onSelect={() => {}} />
             </View>
             <Reason text="A familiar face starts with a little common ground." />
             <Button
@@ -381,8 +362,8 @@ function Quad() {
               Explore the campus demo
             </Button>
             <Text style={styles.welcomeNote}>
-              Campus access requires a verified school email, such as
-              @rutgers.edu. No account needed to try this demo.
+              Campus access requires a verified school email, such as @rutgers.edu. No account
+              needed to try this demo.
             </Text>
           </ScrollView>
         ) : (
@@ -394,53 +375,53 @@ function Quad() {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              {tab !== "pregame" && (
+              {tab !== 'pregame' && (
                 <View style={styles.intro}>
                   <Label>
-                    {tab === "map"
-                      ? "Your campus, connected"
-                      : tab === "connections"
-                        ? "A few familiar faces"
-                        : "A little more you"}
+                    {tab === 'map'
+                      ? 'Your campus, connected'
+                      : tab === 'connections'
+                        ? 'A few familiar faces'
+                        : 'A little more you'}
                   </Label>
                   <Text style={styles.title}>
-                    {tab === "map"
-                      ? "Find your people."
-                      : tab === "connections"
-                        ? "Your campus circle."
-                        : "Your corner of campus."}
+                    {tab === 'map'
+                      ? 'Find your people.'
+                      : tab === 'connections'
+                        ? 'Your campus circle.'
+                        : 'Your corner of campus.'}
                   </Text>
                   <Text style={styles.subtitle}>
-                    {tab === "map"
-                      ? "A little common ground. A good reason to say hello."
-                      : tab === "connections"
-                        ? "Good conversations don’t have to end here."
-                        : "Keep it casual. Give someone a reason to say hello."}
+                    {tab === 'map'
+                      ? 'A little common ground. A good reason to say hello.'
+                      : tab === 'connections'
+                        ? 'Good conversations don’t have to end here.'
+                        : 'Keep it casual. Give someone a reason to say hello.'}
                   </Text>
                   <Pressable
                     accessibilityRole="button"
-                    onPress={() => setDialog("visibility")}
+                    onPress={() => setDialog('visibility')}
                     style={styles.visibilityPill}
                   >
-                    <Icon name={sharing ? "shield" : "ghost"} size={15} />
+                    <Icon name={sharing ? 'shield' : 'ghost'} size={15} />
                     <Text style={styles.visibilityText}>
                       {sharing
-                        ? "You’re visible"
+                        ? 'You’re visible'
                         : enabled
-                          ? "Presence paused"
-                          : "Ghost Mode is on"}
+                          ? 'Presence paused'
+                          : 'Ghost Mode is on'}
                     </Text>
                     <Icon name="settings" size={13} />
                   </Pressable>
                 </View>
               )}
-              {tab === "pregame" && (
+              {tab === 'pregame' && (
                 <View style={{ gap: 18 }}>
                   <PregameLogo />
                   <Pregame />
                 </View>
               )}
-              {tab === "map" && (
+              {tab === 'map' && (
                 <>
                   <ScrollView
                     horizontal
@@ -449,10 +430,10 @@ function Quad() {
                   >
                     {(
                       [
-                        { id: "everyone", label: "Everyone" },
-                        { id: "interests", label: "Shared interests" },
-                        { id: "clubs", label: "My organizations" },
-                        { id: "connections", label: "Connections" },
+                        { id: 'everyone', label: 'Everyone' },
+                        { id: 'interests', label: 'Shared interests' },
+                        { id: 'clubs', label: 'My organizations' },
+                        { id: 'connections', label: 'Connections' },
                       ] as const
                     ).map((f) => (
                       <Chip
@@ -469,7 +450,12 @@ function Quad() {
                   </ScrollView>
                   <View style={styles.mapCard}>
                     <CampusMap
-                      people={people}
+                      people={people.filter(
+                        (p) =>
+                          (DEMO || service.online) &&
+                          p.onMap !== false &&
+                          (!p.presenceExpiresAt || p.presenceExpiresAt > now),
+                      )}
                       selected={selected}
                       onSelect={setSelected}
                       onGathering={openGathering}
@@ -495,35 +481,23 @@ function Quad() {
                             </Text>
                           </View>
                         </View>
-                        <Reason
-                          text={similarity(
-                            state.me,
-                            current,
-                            state.connections,
-                          )}
-                        />
+                        <Reason text={similarity(state.me, current, state.connections)} />
                         <View style={styles.actions}>
                           <View style={{ flex: 1 }}>
-                            <Button
-                              secondary
-                              onPress={() => showPerson(current)}
-                            >
+                            <Button secondary onPress={() => showPerson(current)}>
                               View profile
                             </Button>
                           </View>
-                          <View style={{ flex: 1 }}>
-                            {connectionButton(current)}
-                          </View>
+                          <View style={{ flex: 1 }}>{connectionButton(current)}</View>
                         </View>
                       </View>
                     )}
                   </View>
                   <View style={styles.listHeading}>
                     <Text style={styles.sectionTitle}>
-                      Around Rutgers{" "}
-                      <Text style={styles.count}>{people.length}</Text>
+                      Around Rutgers <Text style={styles.count}>{people.length}</Text>
                     </Text>
-                    <Text style={styles.finePrint}>Sample campus</Text>
+                    <Text style={styles.finePrint}>{DEMO ? 'Sample campus' : 'Rutgers'}</Text>
                   </View>
                   <View style={styles.search}>
                     <Icon name="search" size={17} color={C.muted} />
@@ -539,7 +513,7 @@ function Quad() {
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel="Clear search"
-                        onPress={() => setSearch("")}
+                        onPress={() => setSearch('')}
                       >
                         <Icon name="close" size={15} />
                       </Pressable>
@@ -558,9 +532,7 @@ function Quad() {
                         <View style={{ flex: 1 }}>
                           <Text style={styles.personName}>
                             {p.firstName} {p.lastName}
-                            {state.connections[p.id] === "connected"
-                              ? "  ✓"
-                              : ""}
+                            {state.connections[p.id] === 'connected' ? '  ✓' : ''}
                           </Text>
                           <Text style={styles.personMeta}>
                             {p.major} · {p.year}
@@ -573,46 +545,30 @@ function Quad() {
                           <Chip key={i}>{i}</Chip>
                         ))}
                       </View>
-                      <Reason
-                        text={similarity(state.me, p, state.connections)}
-                      />
+                      <Reason text={similarity(state.me, p, state.connections)} />
                     </Pressable>
                   ))}
                   {people.length === 0 && (
                     <Empty title="A quiet corner of campus">
-                      Try a different filter or clear your search. Blocked
-                      people stay hidden.
+                      Try a different filter or clear your search. Blocked people stay hidden.
                     </Empty>
                   )}
-                  <Text style={styles.endNote}>
-                    The best part happens in person.
-                  </Text>
+                  <Text style={styles.endNote}>The best part happens in person.</Text>
                 </>
               )}
-              {tab === "connections" && (
+              {tab === 'connections' && (
                 <>
                   <View style={styles.connectionTabs}>
-                    {(["connected", "incoming", "outgoing"] as const).map(
-                      (t) => (
-                        <Chip
-                          key={t}
-                          selected={connectionTab === t}
-                          onPress={() => setConnectionTab(t)}
-                        >
-                          {t === "connected"
-                            ? "Connected"
-                            : t === "incoming"
-                              ? "Received"
-                              : "Sent"}{" "}
-                          ·{" "}
-                          {
-                            discoverable.filter(
-                              (p) => state.connections[p.id] === t,
-                            ).length
-                          }
-                        </Chip>
-                      ),
-                    )}
+                    {(['connected', 'incoming', 'outgoing'] as const).map((t) => (
+                      <Chip
+                        key={t}
+                        selected={connectionTab === t}
+                        onPress={() => setConnectionTab(t)}
+                      >
+                        {t === 'connected' ? 'Connected' : t === 'incoming' ? 'Received' : 'Sent'} ·{' '}
+                        {discoverable.filter((p) => state.connections[p.id] === t).length}
+                      </Chip>
+                    ))}
                   </View>
                   {discoverable
                     .filter((p) => state.connections[p.id] === connectionTab)
@@ -633,95 +589,74 @@ function Quad() {
                           </View>
                           <Icon name="arrow" size={17} />
                         </Pressable>
-                        <Reason
-                          text={similarity(state.me, p, state.connections)}
-                        />
+                        <Reason text={similarity(state.me, p, state.connections)} />
                         {connectionButton(p)}
-                        {state.connections[p.id] === "connected" && (
-                          <Button
-                            secondary
-                            icon="arrow"
-                            onPress={() => openChat(p)}
-                          >
+                        {state.connections[p.id] === 'connected' && (
+                          <Button secondary icon="arrow" onPress={() => openChat(p)}>
                             Message {p.firstName}
                           </Button>
                         )}
-                        {connectionTab === "incoming" && (
+                        {connectionTab === 'incoming' && (
                           <Pressable
                             accessibilityRole="button"
                             disabled={saving}
                             style={styles.textLink}
                             onPress={() =>
                               update(
-                                (s) => connectionAction(s, p.id, "remove"),
-                                "Request declined.",
+                                (s) => connectionAction(s, p.id, 'remove'),
+                                'Request declined.',
                               )
                             }
                           >
-                            <Text style={styles.textLinkCopy}>
-                              Decline request
-                            </Text>
+                            <Text style={styles.textLinkCopy}>Decline request</Text>
                           </Pressable>
                         )}
                       </View>
                     ))}
-                  {!discoverable.some(
-                    (p) => state.connections[p.id] === connectionTab,
-                  ) && (
+                  {!discoverable.some((p) => state.connections[p.id] === connectionTab) && (
                     <Empty
                       title={
-                        connectionTab === "connected"
-                          ? "Your circle starts with a hello"
-                          : "You’re all caught up"
+                        connectionTab === 'connected'
+                          ? 'Your circle starts with a hello'
+                          : 'You’re all caught up'
                       }
                     >
-                      Find someone you have a little something in common with on
-                      the map.
+                      Find someone you have a little something in common with on the map.
                     </Empty>
                   )}
                 </>
               )}
-              {tab === "profile" && (
+              {tab === 'profile' && (
                 <>
                   <ProfileContent profile={state.me} />
-                  <Button
-                    secondary
-                    icon="settings"
-                    onPress={() => setDialog("edit")}
-                  >
+                  <Button secondary icon="settings" onPress={() => setDialog('edit')}>
                     Edit your profile
                   </Button>
                   <View style={styles.privacyCard}>
                     <Icon name="shield" size={27} color={C.accent} />
-                    <Text style={styles.smallTitle}>
-                      Your location. Your call.
-                    </Text>
+                    <Text style={styles.smallTitle}>Your location. Your call.</Text>
                     <Text style={styles.bodyCopy}>
-                      Choose who can see you and for how long. Ghost Mode is
-                      always one tap away.
+                      Choose who can see you and for how long. Ghost Mode is always one tap away.
                     </Text>
-                    <Button
-                      secondary
-                      icon="ghost"
-                      onPress={() => setDialog("visibility")}
-                    >
+                    <Button secondary icon="ghost" onPress={() => setDialog('visibility')}>
                       Visibility & blocked people
                     </Button>
                   </View>
-                  <Text style={styles.finePrint}>
-                    Demo profile. Verification is simulated; nothing is shared
-                    publicly.
-                  </Text>
+                  {DEMO ? (
+                    <Text style={styles.finePrint}>Demo profile. Verification is simulated.</Text>
+                  ) : (
+                    <AccountSettings />
+                  )}
                 </>
               )}
             </ScrollView>
             <View style={styles.tabBar}>
               {(
                 [
-                  { id: "map", icon: "map", label: "Map" },
-                  { id: "connections", icon: "users", label: "Connections" },
-                  { id: "profile", icon: "profile", label: "Profile" },
-                  { id: "pregame", icon: "spark", label: "Pregame" },
+                  { id: 'map', icon: 'map', label: 'Map' },
+                  { id: 'connections', icon: 'users', label: 'Connections' },
+                  { id: 'profile', icon: 'profile', label: 'Profile' },
+                  { id: 'pregame', icon: 'spark', label: 'Pregame' },
                 ] as const
               ).map((t) => (
                 <Pressable
@@ -736,20 +671,13 @@ function Quad() {
                   }}
                   style={[styles.tab, tab === t.id && styles.activeTab]}
                 >
-                  <Icon
-                    name={t.icon}
-                    color={tab === t.id ? C.primary : C.muted}
-                    size={21}
-                  />
+                  <Icon name={t.icon} color={tab === t.id ? C.primary : C.muted} size={21} />
                   <Text
-                    style={[
-                      styles.tabText,
-                      tab === t.id && { color: C.accent, fontWeight: "600" },
-                    ]}
+                    style={[styles.tabText, tab === t.id && { color: C.accent, fontWeight: '600' }]}
                   >
                     {t.label}
                   </Text>
-                  {t.id === "pregame" && (
+                  {t.id === 'pregame' && (
                     <View
                       style={[
                         styles.badge,
@@ -766,7 +694,7 @@ function Quad() {
                         style={{
                           color: C.onPrimary,
                           fontSize: 7,
-                          fontWeight: "800",
+                          fontWeight: '800',
                           letterSpacing: 0.5,
                         }}
                       >
@@ -774,7 +702,7 @@ function Quad() {
                       </Text>
                     </View>
                   )}
-                  {t.id === "connections" && received > 0 && (
+                  {t.id === 'connections' && received > 0 && (
                     <View style={styles.badge}>
                       <Text style={styles.badgeText}>{received}</Text>
                     </View>
@@ -788,29 +716,29 @@ function Quad() {
       <Sheet
         open={dialog !== null}
         title={
-          dialog === "chat"
-            ? `Chat with ${person?.firstName || "a connection"}`
-            : dialog === "gathering"
-              ? "A few people, a good reason to go."
-              : dialog === "profile"
-                ? "A little introduction"
-                : dialog === "edit"
-                  ? "Make it feel like you."
-                  : dialog === "visibility"
-                    ? "Your location. Your call."
-                    : dialog === "report"
-                      ? "Report privately"
-                      : dialog === "block"
-                        ? "Block this person?"
-                        : dialog === "disconnect"
-                          ? "Remove connection?"
-                          : "Your campus. Your people."
+          dialog === 'chat'
+            ? `Chat with ${person?.firstName || 'a connection'}`
+            : dialog === 'gathering'
+              ? 'A few people, a good reason to go.'
+              : dialog === 'profile'
+                ? 'A little introduction'
+                : dialog === 'edit'
+                  ? 'Make it feel like you.'
+                  : dialog === 'visibility'
+                    ? 'Your location. Your call.'
+                    : dialog === 'report'
+                      ? 'Report privately'
+                      : dialog === 'block'
+                        ? 'Block this person?'
+                        : dialog === 'disconnect'
+                          ? 'Remove connection?'
+                          : 'Your campus. Your people.'
         }
         onClose={() => setDialog(null)}
       >
-        {dialog === "chat" &&
+        {dialog === 'chat' &&
           person &&
-          state.connections[person.id] === "connected" &&
+          state.connections[person.id] === 'connected' &&
           !state.blocked.includes(person.id) && (
             <Chat
               person={person}
@@ -819,7 +747,7 @@ function Quad() {
               onSend={(text) => update((s) => addMessage(s, person.id, text))}
             />
           )}
-        {dialog === "gathering" && gathering && (
+        {dialog === 'gathering' && gathering && (
           <>
             <Label>Sample campus gathering</Label>
             <Text style={styles.smallTitle}>{gathering.title}</Text>
@@ -834,12 +762,10 @@ function Quad() {
               ))}
             </View>
             <Text style={styles.finePrint}>
-              Fictional, explicitly assigned attendees. A location never implies
-              attendance. Counts respect your filters and blocks.
+              Fictional, explicitly assigned attendees. A location never implies attendance. Counts
+              respect your filters and blocks.
             </Text>
-            <Text style={styles.sectionTitle}>
-              Who’s here · {gathering.members.length}
-            </Text>
+            <Text style={styles.sectionTitle}>Who’s here · {gathering.members.length}</Text>
             {gathering.members.map((p) => (
               <Pressable
                 key={p.id}
@@ -860,46 +786,37 @@ function Quad() {
             ))}
           </>
         )}
-        {dialog === "profile" && person && canDiscover(state, person.id) && (
+        {dialog === 'profile' && person && canDiscover(state, person.id) && (
           <>
             <ProfileContent profile={person} />
             <Reason text={similarity(state.me, person, state.connections)} />
             {connectionButton(person)}
-            {state.connections[person.id] === "connected" && (
+            {state.connections[person.id] === 'connected' && (
               <Button icon="arrow" onPress={() => openChat(person)}>
                 Message {person.firstName}
               </Button>
             )}
             <View style={styles.actions}>
-              <Button secondary icon="flag" onPress={() => setDialog("report")}>
+              <Button secondary icon="flag" onPress={() => setDialog('report')}>
                 Report
               </Button>
-              <Button
-                secondary
-                icon="shield"
-                onPress={() => setDialog("block")}
-              >
+              <Button secondary icon="shield" onPress={() => setDialog('block')}>
                 Block
               </Button>
             </View>
           </>
         )}
-        {dialog === "edit" && (
+        {dialog === 'edit' && (
           <ProfileEditor
             initial={state.me}
             saving={saving}
             onSave={async (p) => {
-              if (
-                await update(
-                  (s) => ({ ...s, me: validateProfile(p) }),
-                  "Your profile is saved.",
-                )
-              )
+              if (await update((s) => ({ ...s, me: validateProfile(p) }), 'Your profile is saved.'))
                 setDialog(null);
             }}
           />
         )}
-        {dialog === "visibility" && (
+        {dialog === 'visibility' && (
           <VisibilityEditor
             state={state}
             now={now}
@@ -908,9 +825,11 @@ function Quad() {
               if (
                 await update(
                   (s) => setVisibility(s, a, m),
-                  a === "nobody"
-                    ? "Ghost Mode is on."
-                    : "Visibility saved with a fictional campus position.",
+                  a === 'nobody'
+                    ? 'Ghost Mode is on.'
+                    : DEMO
+                      ? 'Visibility saved with a fictional campus position.'
+                      : 'Your visibility is saved.',
                 )
               )
                 setDialog(null);
@@ -918,12 +837,12 @@ function Quad() {
             onUnblock={(id) =>
               update(
                 (s) => unblockPerson(s, id),
-                "Unblocked. Previous connections are not restored.",
+                'Unblocked. Previous connections are not restored.',
               )
             }
           />
         )}
-        {dialog === "report" && person && (
+        {dialog === 'report' && person && (
           <ReportEditor
             person={person}
             saving={saving}
@@ -943,19 +862,20 @@ function Quad() {
                       },
                     ],
                   }),
-                  "Report saved on this device. This demo has no review team.",
+                  DEMO
+                    ? 'Report saved on this device. This demo has no review team.'
+                    : 'Report sent to the moderation queue.',
                 )
               )
                 setDialog(null);
             }}
           />
         )}
-        {dialog === "block" && person && (
+        {dialog === 'block' && person && (
           <>
             <Text style={styles.bodyCopy}>
-              You won’t see {person.firstName} in discovery or connections. Any
-              existing connection will be removed. You can unblock them in
-              Visibility settings.
+              You won’t see {person.firstName} in discovery or connections. Any existing connection
+              will be removed. You can unblock them in Visibility settings.
             </Text>
             <Button
               danger
@@ -963,10 +883,7 @@ function Quad() {
               loading={saving}
               onPress={async () => {
                 if (
-                  await update(
-                    (s) => blockPerson(s, person.id),
-                    `${person.firstName} is blocked.`,
-                  )
+                  await update((s) => blockPerson(s, person.id), `${person.firstName} is blocked.`)
                 ) {
                   setSelected(null);
                   setDialog(null);
@@ -977,11 +894,10 @@ function Quad() {
             </Button>
           </>
         )}
-        {dialog === "disconnect" && person && (
+        {dialog === 'disconnect' && person && (
           <>
             <Text style={styles.bodyCopy}>
-              Remove your connection with {person.firstName}? You can send
-              another request later.
+              Remove your connection with {person.firstName}? You can send another request later.
             </Text>
             <Button
               secondary
@@ -989,8 +905,8 @@ function Quad() {
               onPress={async () => {
                 if (
                   await update(
-                    (s) => connectionAction(s, person.id, "remove"),
-                    "Connection removed.",
+                    (s) => connectionAction(s, person.id, 'remove'),
+                    'Connection removed.',
                   )
                 )
                   setDialog(null);
@@ -1000,45 +916,55 @@ function Quad() {
             </Button>
           </>
         )}
-        {dialog === "about" && (
+        {dialog === 'about' && !DEMO && (
+          <View style={{ gap: 16 }}>
+            <Text style={styles.smallTitle}>Your campus. Your people.</Text>
+            <Text style={styles.bodyCopy}>
+              Quad is a Rutgers community app. Your school email stays private. Share an approximate
+              campus location only when you choose, connect with students, and find campus linkups.
+              Messages are available to accepted connections. Block or report anyone from their
+              profile.
+            </Text>
+            <Text style={styles.bodyCopy}>
+              Presence expires after 15 minutes without an update. Ghost Mode stops sharing. Review
+              privacy, terms, and account controls in your Profile tab.
+            </Text>
+          </View>
+        )}
+        {dialog === 'about' && DEMO && (
           <>
             <View style={styles.notice}>
               <Icon name="shield" size={18} />
               <Text style={styles.noticeCopy}>
-                Quad is exclusively for university students. Campus access
-                requires a verified email from your school, such as @rutgers.edu
-                for Rutgers. Verification is simulated in this demo.
+                Quad is exclusively for university students. Campus access requires a verified email
+                from your school, such as @rutgers.edu for Rutgers. Verification is simulated in
+                this demo.
               </Text>
             </View>
             <View style={styles.aboutSymbol}>
               <Icon name="leaf" size={42} color={C.accent} />
             </View>
-            <Text style={styles.smallTitle}>
-              Real conversations start nearby.
-            </Text>
+            <Text style={styles.smallTitle}>Real conversations start nearby.</Text>
             <Text style={styles.bodyCopy}>
-              Find a reason to say hello through shared clubs, interests,
-              majors, and mutual connections. Tap groups on the map to find
-              sample campus gatherings. Accepted connections can open a local
-              demo chat.
+              Find a reason to say hello through shared clubs, interests, majors, and mutual
+              connections. Tap groups on the map to find sample campus gatherings. Accepted
+              connections can open a local demo chat.
             </Text>
             <View style={styles.notice}>
               <Icon name="info" size={20} />
               <Text style={styles.noticeCopy}>
-                This is a working mobile demo with fictional students.
-                University verification is simulated. Your edits, connections,
-                blocks, reports, and visibility choices are saved on this device
-                only. They do not sync with the web app.
+                This is a working mobile demo with fictional students. University verification is
+                simulated. Your edits, connections, blocks, reports, and visibility choices are
+                saved on this device only. They do not sync with the web app.
               </Text>
             </View>
             <Text style={styles.bodyCopy}>
-              Native map tiles use Apple Maps on iOS and Google Maps on Android.
-              Student positions are approximate sample coordinates at Rutgers.
-              The browser uses an illustrated map. No device GPS is requested.
+              Native map tiles use Apple Maps on iOS and Google Maps on Android. Student positions
+              are approximate sample coordinates at Rutgers. The browser uses an illustrated map. No
+              device GPS is requested.
             </Text>
             <Text style={styles.finePrint}>
-              Real accounts, a protected shared backend, and live location
-              sharing come next.
+              Real accounts, a protected shared backend, and live location sharing come next.
             </Text>
           </>
         )}
@@ -1047,7 +973,7 @@ function Quad() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Dismiss notification"
-          onPress={() => setToast("")}
+          onPress={() => setToast('')}
           style={styles.toast}
         >
           <Icon name="info" size={17} color={C.onPrimary} />
@@ -1075,20 +1001,15 @@ function Sheet({
   const styles = useThemedStyles(createStyles);
 
   return (
-    <Modal
-      visible={open}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <SafeAreaView edges={["top", "bottom"]} style={styles.modalOverlay}>
+    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
+      <SafeAreaView edges={['top', 'bottom']} style={styles.modalOverlay}>
         <Pressable
           accessibilityLabel="Dismiss dialog"
           style={StyleSheet.absoluteFill}
           onPress={onClose}
         />
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.sheet}
         >
           <View style={styles.sheetHeader}>
@@ -1136,7 +1057,7 @@ function ProfileContent({ profile: p }: { profile: Profile }) {
       </View>
       <Text style={styles.personMeta}>
         {p.major}
-        {p.year ? ` · Class of ${p.year}` : ""}
+        {p.year ? ` · Class of ${p.year}` : ''}
       </Text>
       {!!p.bio && <Text style={styles.profileBio}>{p.bio}</Text>}
       <View style={styles.profileSection}>
@@ -1158,9 +1079,7 @@ function ProfileContent({ profile: p }: { profile: Profile }) {
             <Text style={styles.clubText}>{c}</Text>
           </View>
         ))}
-        {p.clubs.length === 0 && (
-          <Text style={styles.finePrint}>No organizations added yet.</Text>
-        )}
+        {p.clubs.length === 0 && <Text style={styles.finePrint}>No organizations added yet.</Text>}
       </View>
       {p.experiences.length > 0 && (
         <View style={styles.profileSection}>
@@ -1170,11 +1089,9 @@ function ProfileContent({ profile: p }: { profile: Profile }) {
               <Text style={styles.clubText}>{e.title}</Text>
               <Text style={styles.finePrint}>
                 {e.organization}
-                {e.when ? ` · ${e.when}` : ""}
+                {e.when ? ` · ${e.when}` : ''}
               </Text>
-              {!!e.description && (
-                <Text style={styles.bodyCopy}>{e.description}</Text>
-              )}
+              {!!e.description && <Text style={styles.bodyCopy}>{e.description}</Text>}
             </View>
           ))}
         </View>
@@ -1211,13 +1128,10 @@ function Field({
         onChangeText={onChange}
         multiline={multiline}
         maxLength={max}
-        keyboardType={numeric ? "number-pad" : "default"}
+        keyboardType={numeric ? 'number-pad' : 'default'}
         placeholder={placeholder}
         placeholderTextColor={C.muted}
-        style={[
-          styles.input,
-          multiline && { minHeight: 90, textAlignVertical: "top" },
-        ]}
+        style={[styles.input, multiline && { minHeight: 90, textAlignVertical: 'top' }]}
       />
     </View>
   );
@@ -1234,11 +1148,9 @@ function ProfileEditor({
   const C = useTheme().colors;
   const styles = useThemedStyles(createStyles);
 
-  const [draft, setDraft] = useState<Profile>(() =>
-      JSON.parse(JSON.stringify(initial)),
-    ),
-    [year, setYear] = useState(initial.year?.toString() || "");
-  const toggle = (field: "interests" | "clubs", value: string) =>
+  const [draft, setDraft] = useState<Profile>(() => JSON.parse(JSON.stringify(initial))),
+    [year, setYear] = useState(initial.year?.toString() || '');
+  const toggle = (field: 'interests' | 'clubs', value: string) =>
     setDraft((p) => ({
       ...p,
       [field]: p[field].includes(value)
@@ -1248,9 +1160,29 @@ function ProfileEditor({
   return (
     <>
       <Text style={styles.bodyCopy}>
-        A few details are all it takes. Interests, organizations, and experience
-        are optional.
+        A few details are all it takes. Interests, organizations, and experience are optional.
       </Text>
+      <Text style={styles.fieldLabel}>Choose your avatar</Text>
+      <View style={styles.chipRow}>
+        {Array.from({ length: 13 }, (_, avatar) => (
+          <Pressable
+            key={avatar}
+            accessibilityRole="radio"
+            accessibilityLabel={`Avatar ${avatar + 1}`}
+            accessibilityState={{ checked: draft.avatar === avatar }}
+            disabled={saving}
+            onPress={() => setDraft({ ...draft, avatar })}
+            style={{
+              borderWidth: 2,
+              borderColor: draft.avatar === avatar ? C.primary : 'transparent',
+              borderRadius: 26,
+              padding: 2,
+            }}
+          >
+            <Avatar person={{ ...draft, avatar }} size={42} />
+          </Pressable>
+        ))}
+      </View>
       <Field
         label="First name"
         value={draft.firstName}
@@ -1295,14 +1227,14 @@ function ProfileEditor({
       {(
         [
           {
-            field: "interests",
-            label: "Interests & hobbies",
+            field: 'interests',
+            label: 'Interests & hobbies',
             values: CATALOG.interests,
             max: 8,
           },
           {
-            field: "clubs",
-            label: "Campus organizations",
+            field: 'clubs',
+            label: 'Campus organizations',
             values: CATALOG.clubs,
             max: 6,
           },
@@ -1317,10 +1249,7 @@ function ProfileEditor({
               <Chip
                 key={v}
                 selected={draft[group.field].includes(v)}
-                disabled={
-                  !draft[group.field].includes(v) &&
-                  draft[group.field].length >= group.max
-                }
+                disabled={!draft[group.field].includes(v) && draft[group.field].length >= group.max}
                 onPress={() => toggle(group.field, v)}
               >
                 {v}
@@ -1340,9 +1269,7 @@ function ProfileEditor({
               onChange={(v) =>
                 setDraft({
                   ...draft,
-                  experiences: draft.experiences.map((x, n) =>
-                    n === i ? { ...x, title: v } : x,
-                  ),
+                  experiences: draft.experiences.map((x, n) => (n === i ? { ...x, title: v } : x)),
                 })
               }
             />
@@ -1367,9 +1294,7 @@ function ProfileEditor({
               onChange={(v) =>
                 setDraft({
                   ...draft,
-                  experiences: draft.experiences.map((x, n) =>
-                    n === i ? { ...x, when: v } : x,
-                  ),
+                  experiences: draft.experiences.map((x, n) => (n === i ? { ...x, when: v } : x)),
                 })
               }
             />
@@ -1409,7 +1334,7 @@ function ProfileEditor({
                 ...draft,
                 experiences: [
                   ...draft.experiences,
-                  { title: "", organization: "", when: "", description: "" },
+                  { title: '', organization: '', when: '', description: '' },
                 ],
               })
             }
@@ -1449,29 +1374,28 @@ function VisibilityEditor({
   return (
     <>
       <Text style={styles.bodyCopy}>
-        Audience and duration are independent. You decide when you’re
-        discoverable.
+        Audience and duration are independent. You decide when you’re discoverable.
       </Text>
       <Text style={styles.fieldLabel}>Who can see you?</Text>
       {(
         [
           {
-            id: "university",
-            icon: "profile",
-            title: "Everyone at Rutgers",
-            copy: "Meet people beyond your usual circle.",
+            id: 'university',
+            icon: 'profile',
+            title: 'Everyone at Rutgers',
+            copy: 'Meet people beyond your usual circle.',
           },
           {
-            id: "connections",
-            icon: "users",
-            title: "My connections",
-            copy: "Keep it to people you’ve connected with.",
+            id: 'connections',
+            icon: 'users',
+            title: 'My connections',
+            copy: 'Keep it to people you’ve connected with.',
           },
           {
-            id: "nobody",
-            icon: "ghost",
-            title: "Nobody · Ghost Mode",
-            copy: "Explore campus without appearing on the map.",
+            id: 'nobody',
+            icon: 'ghost',
+            title: 'Nobody · Ghost Mode',
+            copy: 'Explore campus without appearing on the map.',
           },
         ] as const
       ).map((a) => (
@@ -1481,10 +1405,7 @@ function VisibilityEditor({
           accessibilityState={{ checked: audience === a.id }}
           accessibilityLabel={a.title}
           onPress={() => setAudience(a.id)}
-          style={[
-            styles.audienceOption,
-            audience === a.id && styles.audienceSelected,
-          ]}
+          style={[styles.audienceOption, audience === a.id && styles.audienceSelected]}
         >
           <Icon name={a.icon} color={C.accent} />
           <View style={{ flex: 1 }}>
@@ -1494,15 +1415,15 @@ function VisibilityEditor({
           {audience === a.id && <Icon name="check" size={17} />}
         </Pressable>
       ))}
-      {audience !== "nobody" && (
+      {audience !== 'nobody' && (
         <>
           <Text style={styles.fieldLabel}>For how long?</Text>
           <View style={styles.chipRow}>
             {[
-              { value: 30, label: "30 minutes" },
-              { value: 60, label: "1 hour" },
-              { value: 180, label: "3 hours" },
-              { value: null, label: "Always enabled" },
+              { value: 30, label: '30 minutes' },
+              { value: 60, label: '1 hour' },
+              { value: 180, label: '3 hours' },
+              { value: null, label: 'Always enabled' },
             ].map((d) => (
               <Chip
                 key={d.label}
@@ -1518,42 +1439,40 @@ function VisibilityEditor({
       <View style={styles.notice}>
         <Icon name="shield" size={18} />
         <Text style={styles.noticeCopy}>
-          This demo uses a fictional campus position. No device GPS is
-          requested. Presence pauses after 15 minutes without an update, even
-          with Always enabled. Save again to refresh sample presence.
+          {DEMO
+            ? 'This demo uses a fictional campus position. No device GPS is requested.'
+            : 'Sharing requests location permission. Only an approximate campus cell is stored and shown; exact GPS is not retained. Location is refreshed only while the app is open.'}{' '}
+          Presence pauses after 15 minutes without an update, even with Always enabled. Ghost Mode
+          stops sharing immediately.
         </Text>
       </View>
       {state.visibility.until !== null && state.visibility.until > now && (
         <Text style={styles.finePrint}>
-          Current setting expires{" "}
+          Current setting expires{' '}
           {new Date(state.visibility.until).toLocaleTimeString([], {
-            hour: "numeric",
-            minute: "2-digit",
+            hour: 'numeric',
+            minute: '2-digit',
           })}
           .
         </Text>
       )}
-      <Button
-        loading={saving}
-        icon="check"
-        onPress={() => onSave(audience, duration)}
-      >
+      <Button loading={saving} icon="check" onPress={() => onSave(audience, duration)}>
         Save visibility
       </Button>
       {state.blocked.length > 0 && (
         <View style={styles.profileSection}>
           <Text style={styles.sectionTitle}>Blocked people</Text>
           {state.blocked.map((id) => {
-            const p = PEOPLE.find((x) => x.id === id);
+            const p = DEMO_PEOPLE.find((x) => x.id === id);
             return (
               <View style={styles.blockedRow} key={id}>
                 <Text style={styles.clubText}>
-                  {p ? `${p.firstName} ${p.lastName}` : "Student"}
+                  {p ? `${p.firstName} ${p.lastName}` : 'Student'}
                 </Text>
                 <Pressable
                   disabled={saving}
                   accessibilityRole="button"
-                  accessibilityLabel={`Unblock ${p?.firstName || "student"}`}
+                  accessibilityLabel={`Unblock ${p?.firstName || 'student'}`}
                   onPress={() => onUnblock(id)}
                 >
                   <Text style={styles.textLinkCopy}>Unblock</Text>
@@ -1578,26 +1497,21 @@ function ReportEditor({
   const C = useTheme().colors;
   const styles = useThemedStyles(createStyles);
 
-  const [reason, setReason] = useState("Safety concern"),
-    [details, setDetails] = useState("");
+  const [reason, setReason] = useState('Safety concern'),
+    [details, setDetails] = useState('');
   return (
     <>
       <Text style={styles.bodyCopy}>
-        Your report about {person.firstName} is private and won’t be shared with
-        them.
+        Your report about {person.firstName} is private and won’t be shared with them.
       </Text>
       <View style={styles.chipRow}>
-        {[
-          "Safety concern",
-          "Harassment",
-          "Impersonation",
-          "Inappropriate profile",
-          "Other",
-        ].map((r) => (
-          <Chip key={r} selected={reason === r} onPress={() => setReason(r)}>
-            {r}
-          </Chip>
-        ))}
+        {['Safety concern', 'Harassment', 'Impersonation', 'Inappropriate profile', 'Other'].map(
+          (r) => (
+            <Chip key={r} selected={reason === r} onPress={() => setReason(r)}>
+              {r}
+            </Chip>
+          ),
+        )}
       </View>
       <Field
         label="Anything else? (optional)"
@@ -1612,11 +1526,7 @@ function ReportEditor({
           Demo reports stay on this device. There is no staffed review team.
         </Text>
       </View>
-      <Button
-        loading={saving}
-        icon="flag"
-        onPress={() => onSave(reason, details)}
-      >
+      <Button loading={saving} icon="flag" onPress={() => onSave(reason, details)}>
         Save report
       </Button>
     </>
@@ -1627,20 +1537,20 @@ const createStyles = (C: Palette) =>
   StyleSheet.create({
     root: {
       flex: 1,
-      backgroundColor: Platform.OS === "web" ? C.outer : C.paper,
-      alignItems: "center",
-      justifyContent: "center",
+      backgroundColor: Platform.OS === 'web' ? C.outer : C.paper,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     frame: {
       flex: 1,
-      width: "100%",
+      width: '100%',
       maxWidth: 520,
       backgroundColor: C.paper,
-      overflow: "hidden",
+      overflow: 'hidden',
     },
     campusAccess: {
-      flexDirection: "row",
-      alignItems: "center",
+      flexDirection: 'row',
+      alignItems: 'center',
       gap: 7,
       paddingHorizontal: 22,
       paddingVertical: 8,
@@ -1657,40 +1567,40 @@ const createStyles = (C: Palette) =>
     header: {
       height: 72,
       paddingHorizontal: 22,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       backgroundColor: C.surface,
       borderBottomWidth: 1,
       borderColor: C.line,
     },
-    brand: { flexDirection: "row", gap: 8, alignItems: "center" },
+    brand: { flexDirection: 'row', gap: 8, alignItems: 'center' },
     logo: {
       backgroundColor: C.primary,
       width: 32,
       height: 32,
       borderRadius: 10,
-      justifyContent: "center",
-      alignItems: "center",
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     logoText: {
       fontSize: 28,
       lineHeight: 33,
       color: C.onPrimary,
-      fontWeight: "700",
+      fontWeight: '700',
     },
     brandText: {
       fontSize: 31,
-      fontWeight: "700",
+      fontWeight: '700',
       letterSpacing: -1.8,
       color: C.ink,
     },
-    headerRight: { flexDirection: "row", gap: 8, alignItems: "center" },
+    headerRight: { flexDirection: 'row', gap: 8, alignItems: 'center' },
     rutgers: {
       fontFamily: serif,
       fontSize: 22,
       color: C.accent,
-      fontWeight: "700",
+      fontWeight: '700',
     },
     campusName: { fontSize: 11, color: C.muted },
     demoBadge: {
@@ -1713,9 +1623,9 @@ const createStyles = (C: Palette) =>
     },
     subtitle: { fontSize: 11, color: C.muted, lineHeight: 18 },
     visibilityPill: {
-      flexDirection: "row",
-      alignSelf: "flex-start",
-      alignItems: "center",
+      flexDirection: 'row',
+      alignSelf: 'flex-start',
+      alignItems: 'center',
       gap: 7,
       backgroundColor: C.soft,
       borderWidth: 1,
@@ -1729,27 +1639,27 @@ const createStyles = (C: Palette) =>
     mapCard: {
       height: 430,
       borderRadius: 20,
-      overflow: "hidden",
+      overflow: 'hidden',
       borderWidth: 1,
       borderColor: C.line,
       backgroundColor: C.mapBase,
     },
     mapLabel: {
-      position: "absolute",
+      position: 'absolute',
       top: 13,
       left: 12,
       backgroundColor: C.surface,
       borderRadius: 12,
       padding: 11,
-      flexDirection: "row",
-      alignItems: "center",
+      flexDirection: 'row',
+      alignItems: 'center',
       gap: 9,
-      boxShadow: "0 2px 12px #00000022",
+      boxShadow: '0 2px 12px #00000022',
     },
-    mapLabelTitle: { fontSize: 11, fontWeight: "600", color: C.ink },
+    mapLabelTitle: { fontSize: 11, fontWeight: '600', color: C.ink },
     mapLabelCopy: { fontSize: 8, color: C.muted, marginTop: 4 },
     popup: {
-      position: "absolute",
+      position: 'absolute',
       left: 12,
       right: 12,
       bottom: 26,
@@ -1757,37 +1667,37 @@ const createStyles = (C: Palette) =>
       padding: 15,
       borderRadius: 17,
       gap: 12,
-      boxShadow: "0 4px 24px #00000022",
+      boxShadow: '0 4px 24px #00000022',
     },
     popupClose: {
-      position: "absolute",
+      position: 'absolute',
       top: 5,
       right: 5,
       padding: 7,
       zIndex: 2,
     },
     popupPerson: {
-      flexDirection: "row",
-      alignItems: "center",
+      flexDirection: 'row',
+      alignItems: 'center',
       gap: 10,
       paddingRight: 12,
     },
-    personName: { fontSize: 14, fontWeight: "600", color: C.ink },
+    personName: { fontSize: 14, fontWeight: '600', color: C.ink },
     personMeta: { fontSize: 10, color: C.muted, lineHeight: 16, marginTop: 4 },
-    actions: { flexDirection: "row", gap: 9, marginTop: 3 },
+    actions: { flexDirection: 'row', gap: 9, marginTop: 3 },
     listHeading: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       marginTop: 8,
     },
-    sectionTitle: { fontSize: 14, fontWeight: "600", color: C.ink },
+    sectionTitle: { fontSize: 14, fontWeight: '600', color: C.ink },
     count: { fontSize: 11, color: C.accent },
     finePrint: { fontSize: 10, lineHeight: 17, color: C.muted },
     search: {
-      flexDirection: "row",
+      flexDirection: 'row',
       gap: 8,
-      alignItems: "center",
+      alignItems: 'center',
       padding: 12,
       borderWidth: 1,
       borderColor: C.line,
@@ -1809,12 +1719,12 @@ const createStyles = (C: Palette) =>
       backgroundColor: C.surface,
       gap: 12,
     },
-    cardTop: { flexDirection: "row", alignItems: "center", gap: 11 },
-    chipRow: { flexDirection: "row", gap: 7, flexWrap: "wrap", marginTop: 4 },
+    cardTop: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+    chipRow: { flexDirection: 'row', gap: 7, flexWrap: 'wrap', marginTop: 4 },
     endNote: {
-      textAlign: "center",
+      textAlign: 'center',
       fontFamily: serif,
-      fontStyle: "italic",
+      fontStyle: 'italic',
       fontSize: 16,
       color: C.muted,
       marginVertical: 15,
@@ -1824,41 +1734,41 @@ const createStyles = (C: Palette) =>
       borderTopWidth: 1,
       borderColor: C.line,
       backgroundColor: C.surface,
-      flexDirection: "row",
+      flexDirection: 'row',
     },
     tab: {
       flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
+      alignItems: 'center',
+      justifyContent: 'center',
       gap: 5,
       borderTopWidth: 2,
-      borderTopColor: "transparent",
+      borderTopColor: 'transparent',
     },
     activeTab: { borderTopColor: C.primary },
     tabText: { fontSize: 9, color: C.muted },
     badge: {
-      position: "absolute",
+      position: 'absolute',
       top: 7,
-      right: "28%",
+      right: '28%',
       backgroundColor: C.soft,
       paddingHorizontal: 5,
       paddingVertical: 2,
       borderRadius: 6,
     },
-    badgeText: { color: C.accent, fontSize: 8, fontWeight: "600" },
-    connectionTabs: { flexDirection: "row", gap: 7, marginBottom: 8 },
+    badgeText: { color: C.accent, fontSize: 8, fontWeight: '600' },
+    connectionTabs: { flexDirection: 'row', gap: 7, marginBottom: 8 },
     profileContent: { gap: 9 },
     profileCover: {
       height: 100,
       backgroundColor: C.cover,
       borderRadius: 17,
-      overflow: "hidden",
-      alignItems: "flex-end",
-      justifyContent: "center",
+      overflow: 'hidden',
+      alignItems: 'flex-end',
+      justifyContent: 'center',
       paddingRight: 22,
     },
     coverCircle: {
-      position: "absolute",
+      position: 'absolute',
       height: 180,
       width: 180,
       borderRadius: 90,
@@ -1884,14 +1794,14 @@ const createStyles = (C: Palette) =>
       gap: 13,
     },
     affiliation: {
-      flexDirection: "row",
-      alignItems: "center",
+      flexDirection: 'row',
+      alignItems: 'center',
       gap: 10,
       backgroundColor: C.soft,
       padding: 12,
       borderRadius: 11,
     },
-    clubText: { fontSize: 12, color: C.ink, fontWeight: "500", lineHeight: 19 },
+    clubText: { fontSize: 12, color: C.ink, fontWeight: '500', lineHeight: 19 },
     experience: {
       gap: 6,
       borderLeftWidth: 2,
@@ -1921,7 +1831,7 @@ const createStyles = (C: Palette) =>
     welcomeMap: {
       height: 260,
       borderRadius: 75,
-      overflow: "hidden",
+      overflow: 'hidden',
       borderWidth: 1,
       borderColor: C.line,
       marginTop: 4,
@@ -1929,7 +1839,7 @@ const createStyles = (C: Palette) =>
     welcomeNote: {
       fontSize: 9,
       lineHeight: 17,
-      textAlign: "center",
+      textAlign: 'center',
       color: C.muted,
       marginBottom: 15,
     },
@@ -1937,35 +1847,35 @@ const createStyles = (C: Palette) =>
     modalOverlay: {
       flex: 1,
       backgroundColor: C.overlay,
-      justifyContent: "flex-end",
-      alignItems: "center",
+      justifyContent: 'flex-end',
+      alignItems: 'center',
     },
     sheet: {
-      width: "100%",
+      width: '100%',
       maxWidth: 520,
-      maxHeight: "94%",
+      maxHeight: '94%',
       backgroundColor: C.surface,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
-      overflow: "hidden",
-      boxShadow: "0 -8px 40px #00000022",
+      overflow: 'hidden',
+      boxShadow: '0 -8px 40px #00000022',
     },
     sheetHeader: {
       paddingVertical: 17,
       paddingHorizontal: 22,
       borderBottomWidth: 1,
       borderColor: C.line,
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
     },
-    sheetTitle: { fontSize: 14, fontWeight: "600", color: C.ink },
+    sheetTitle: { fontSize: 14, fontWeight: '600', color: C.ink },
     closeButton: { padding: 5 },
     sheetBody: { padding: 22, paddingBottom: 30, gap: 17 },
     field: { gap: 8, marginTop: 3 },
     fieldLabel: {
       fontSize: 12,
-      fontWeight: "500",
+      fontWeight: '500',
       color: C.ink,
       lineHeight: 19,
     },
@@ -1987,16 +1897,16 @@ const createStyles = (C: Palette) =>
       borderRadius: 12,
       backgroundColor: C.soft,
     },
-    textLink: { alignItems: "center", padding: 4 },
-    textLinkCopy: { fontSize: 11, color: C.accent, fontWeight: "500" },
+    textLink: { alignItems: 'center', padding: 4 },
+    textLinkCopy: { fontSize: 11, color: C.accent, fontWeight: '500' },
     audienceOption: {
-      flexDirection: "row",
+      flexDirection: 'row',
       gap: 11,
       padding: 15,
       borderWidth: 1,
       borderColor: C.line,
       borderRadius: 13,
-      alignItems: "center",
+      alignItems: 'center',
     },
     audienceSelected: { backgroundColor: C.soft, borderColor: C.accent },
     notice: {
@@ -2005,15 +1915,15 @@ const createStyles = (C: Palette) =>
       borderRadius: 12,
       borderWidth: 1,
       borderColor: C.line,
-      flexDirection: "row",
-      alignItems: "flex-start",
+      flexDirection: 'row',
+      alignItems: 'flex-start',
       gap: 10,
     },
     noticeCopy: { fontSize: 11, lineHeight: 19, color: C.muted, flex: 1 },
     blockedRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       paddingVertical: 9,
     },
     aboutSymbol: {
@@ -2021,25 +1931,25 @@ const createStyles = (C: Palette) =>
       height: 80,
       borderRadius: 40,
       backgroundColor: C.soft,
-      alignSelf: "center",
-      alignItems: "center",
-      justifyContent: "center",
+      alignSelf: 'center',
+      alignItems: 'center',
+      justifyContent: 'center',
       marginVertical: 10,
     },
     toast: {
-      position: "absolute",
+      position: 'absolute',
       bottom: 85,
       left: 20,
       right: 20,
       maxWidth: 480,
-      alignSelf: "center",
+      alignSelf: 'center',
       backgroundColor: C.primary,
       borderRadius: 13,
       padding: 15,
-      flexDirection: "row",
-      alignItems: "center",
+      flexDirection: 'row',
+      alignItems: 'center',
       gap: 10,
-      boxShadow: "0 3px 20px #00000022",
+      boxShadow: '0 3px 20px #00000022',
     },
     toastText: { flex: 1, color: C.onPrimary, fontSize: 12, lineHeight: 18 },
   });

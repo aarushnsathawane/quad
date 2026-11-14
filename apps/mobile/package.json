@@ -1,11 +1,14 @@
 {
   "name": "quad-mobile",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
     "@expo/metro-runtime": "~57.0.17",
     "@react-native-async-storage/async-storage": "2.2.0",
-    "expo": "~57.0.30",
+    "expo": "~57.0.0",
+    "expo-crypto": "~57.0.4",
+    "expo-location": "~57.0.23",
+    "expo-secure-store": "~57.0.4",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
     "leaflet": "^1.9.4",
@@ -30,10 +33,18 @@
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "export": "expo export --platform all",
-    "check": "npm run typecheck && npm test && npm run export"
+    "check": "npm run typecheck && npm test && npm run export",
+    "demo": "EXPO_PUBLIC_DEMO_MODE=true expo start",
+    "demo:web": "EXPO_PUBLIC_DEMO_MODE=true expo start --web",
+    "export:production": "EXPO_PUBLIC_DEMO_MODE=false expo export --platform all"
   },
   "private": true,
   "engines": {
     "node": ">=22.13.0"
+  },
+  "overrides": {
+    "@expo/fingerprint": {
+      "minimatch": "^11.0.8"
+    }
   }
 }

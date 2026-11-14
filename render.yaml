@@ -1,0 +1,55 @@
+services:
+  - type: web
+    name: quad
+    runtime: docker
+    plan: starter
+    numInstances: 1
+    autoDeployTrigger: off
+    healthCheckPath: /healthz
+    disk:
+      name: quad-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+      - key: QUAD_DB
+        value: /data/quad.sqlite
+      - key: TRUST_PROXY
+        value: '1'
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: BACKUP_KEY
+        generateValue: true
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: '587'
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: SUPPORT_EMAIL
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: BACKUP_BUCKET
+        sync: false
+      - key: BACKUP_ACCESS_KEY
+        sync: false
+      - key: BACKUP_SECRET_KEY
+        sync: false
+      - key: BACKUP_REGION
+        value: us-east-1
+      - key: BACKUP_ENDPOINT
+        sync: false
+      - key: MAP_TILE_URL
+        value: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+      - key: MAP_ATTRIBUTION
+        value: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
