@@ -495,3 +495,51 @@ test('auth throttling survives restart, peers cannot mutate others profiles and 
   f.tick(31 * 86400000);
   assert.equal((await f.call('/v1/bootstrap', 'GET', undefined, a.token)).statusCode, 401);
 });
+test('the deployment serves its homepage, protects API routes, and sets secure production cookies', async (t) => {
+  const { writeFileSync } = await import('node:fs');
+  const dir = mkdtempSync(join(tmpdir(), 'quad-web-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  writeFileSync(join(dir, 'index.html'), '<!doctype html><title>Quad</title><div id="root"></div>');
+  let code;
+  const config = {
+    ...readConfig({}),
+    production: true,
+    origin: 'https://quad.example',
+    webRoot: dir,
+  };
+  const { app } = await createApp({
+    config,
+    dbPath: ':memory:',
+    deliver: async (_, value) => {
+      code = value;
+    },
+  });
+  t.after(() => app.close());
+  const page = await app.inject({ url: '/', headers: { accept: 'text/html' } });
+  assert.equal(page.statusCode, 200);
+  assert.match(page.body, /<title>Quad<\/title>/);
+  assert.match(page.headers['content-security-policy'], /frame-ancestors 'none'/);
+  assert.ok(page.headers['strict-transport-security']);
+  assert.equal(
+    (await app.inject({ url: '/v1/bootstrap', headers: { accept: 'text/html' } })).statusCode,
+    401,
+  );
+  assert.equal(
+    (await app.inject({ url: '/api/demo/login', method: 'POST', payload: {} })).statusCode,
+    404,
+  );
+  await app.inject({
+    url: '/v1/auth/request-code',
+    method: 'POST',
+    payload: { email: 'cookie@rutgers.edu' },
+  });
+  const result = await app.inject({
+    url: '/v1/auth/verify',
+    method: 'POST',
+    payload: { email: 'cookie@rutgers.edu', code, termsAccepted: true },
+  });
+  assert.equal(result.statusCode, 200);
+  assert.match(result.headers['set-cookie'], /__Host-quad_session=/);
+  assert.match(result.headers['set-cookie'], /Secure/);
+  assert.match(result.headers['set-cookie'], /HttpOnly/);
+});

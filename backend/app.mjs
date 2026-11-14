@@ -98,12 +98,10 @@ export async function createApp({
     const status = err.statusCode >= 400 && err.statusCode < 500 ? err.statusCode : 500;
     if (status === 500)
       req.log.error({ requestId: req.id, error: err.name, code: err.code }, 'Request failed');
-    reply
-      .code(status)
-      .send({
-        error: status === 500 ? 'Something went wrong. Please try again.' : err.message,
-        requestId: req.id,
-      });
+    reply.code(status).send({
+      error: status === 500 ? 'Something went wrong. Please try again.' : err.message,
+      requestId: req.id,
+    });
   });
   app.addHook('onRequest', async (req, reply) => {
     if (req.url.startsWith('/v1/')) {
@@ -524,14 +522,12 @@ export async function createApp({
       );
     return {
       nextCursor: rows.length === 100 ? rows.at(-1).id : null,
-      messages: rows
-        .reverse()
-        .map((m) => ({
-          id: m.id,
-          author: m.sender === me ? 'you' : 'them',
-          text: m.body,
-          createdAt: m.created_at,
-        })),
+      messages: rows.reverse().map((m) => ({
+        id: m.id,
+        author: m.sender === me ? 'you' : 'them',
+        text: m.body,
+        createdAt: m.created_at,
+      })),
     };
   });
   app.post(
@@ -789,7 +785,7 @@ export async function createApp({
     store.db.close();
   });
   if (serveWeb && existsSync(config.webRoot)) {
-    await app.register(staticFiles, { root: config.webRoot, maxAge: 0, index: false });
+    await app.register(staticFiles, { root: config.webRoot, maxAge: 0, index: 'index.html' });
     app.setNotFoundHandler(async (req, reply) => {
       if (
         req.url.startsWith('/v1/') ||
