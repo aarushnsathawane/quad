@@ -6,6 +6,7 @@ services:
     numInstances: 1
     autoDeployTrigger: off
     healthCheckPath: /healthz
+    maxShutdownDelaySeconds: 60
     disk:
       name: quad-data
       mountPath: /data

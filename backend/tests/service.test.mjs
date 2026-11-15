@@ -543,3 +543,18 @@ test('the deployment serves its homepage, protects API routes, and sets secure p
   assert.match(result.headers['set-cookie'], /Secure/);
   assert.match(result.headers['set-cookie'], /HttpOnly/);
 });
+test('sign out all devices revokes every session and native auth uses bearer tokens only', async (t) => {
+  const f = await fixture(t),
+    first = await f.user('alice');
+  f.tick(61000);
+  const second = await f.user('alice');
+  assert.notEqual(first.token, second.token);
+  const nativeCookieOnly = await f.call('/v1/bootstrap', 'GET', undefined, undefined, {
+    'x-quad-client': 'native',
+    cookie: 'quad_session=' + first.token,
+  });
+  assert.equal(nativeCookieOnly.statusCode, 401);
+  assert.equal((await f.call('/v1/auth/logout-all', 'POST', {}, first.token)).statusCode, 200);
+  assert.equal((await f.call('/v1/bootstrap', 'GET', undefined, first.token)).statusCode, 401);
+  assert.equal((await f.call('/v1/bootstrap', 'GET', undefined, second.token)).statusCode, 401);
+});

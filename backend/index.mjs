@@ -15,7 +15,7 @@ app.get('/readyz', async () => ({ ok: true, backup: backups.status() }));
 await app.listen({ host: config.host, port: config.port });
 for (const signal of ['SIGTERM', 'SIGINT'])
   process.once(signal, async () => {
-    backups.stop();
+    await backups.stop();
     await app.close();
     process.exit(0);
   });

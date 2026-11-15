@@ -14,6 +14,7 @@ import {
   timingSafeEqual,
 } from 'node:crypto';
 import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { openDatabase } from './database.mjs';
 import { readConfig } from './config.mjs';
 import { createMailer } from './mail.mjs';
@@ -44,6 +45,8 @@ export async function createApp({
   serveWeb = true,
   logger = false,
 } = {}) {
+  if (config.production && serveWeb && !existsSync(resolve(config.webRoot, 'index.html')))
+    throw new Error('Build the production web app before starting the service');
   const store = openDatabase(dbPath),
     { get, all, run, transaction } = store;
   const cookieName = config.production ? '__Host-quad_session' : 'quad_session';
@@ -78,6 +81,7 @@ export async function createApp({
         upgradeInsecureRequests: config.production ? [] : null,
       },
     },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     hsts: config.production ? { maxAge: 31536000, includeSubDomains: true } : false,
   });
   await app.register(rateLimit, {
@@ -159,7 +163,8 @@ export async function createApp({
   };
   const authenticate = async (req) => {
     const bearer = req.headers.authorization?.match(/^Bearer ([A-Za-z0-9_-]{43})$/)?.[1];
-    const token = bearer || req.cookies[cookieName];
+    const token =
+      bearer || (req.headers['x-quad-client'] !== 'native' ? req.cookies[cookieName] : undefined);
     if (!token || token.length !== 43) fail(401, 'Sign in to continue');
     const session = get(
       "SELECT s.*,u.email,u.profile,u.onboarded FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.digest=? AND s.expires_at>? AND u.status='active'",
@@ -355,19 +360,30 @@ export async function createApp({
         run('INSERT INTO sessions VALUES (?,?,?,?)', hash(token), u.id, now + SESSION, now);
         return u;
       });
-      reply.setCookie(cookieName, token, {
-        httpOnly: true,
-        secure: config.production,
-        sameSite: 'lax',
-        path: '/',
-        maxAge: SESSION / 1000,
-      });
+      if (req.headers['x-quad-client'] !== 'native')
+        reply.setCookie(cookieName, token, {
+          httpOnly: true,
+          secure: config.production,
+          sameSite: 'lax',
+          path: '/',
+          maxAge: SESSION / 1000,
+        });
       return {
         ...bootstrap({ id: user.id, email: user.email, onboarded: !!user.onboarded }),
         ...(req.headers['x-quad-client'] === 'native' ? { token } : {}),
       };
     },
   );
+  app.post('/v1/auth/logout-all', { preHandler: authenticate }, async (req, reply) => {
+    run('DELETE FROM sessions WHERE user_id=?', req.user.id);
+    reply.clearCookie(cookieName, {
+      path: '/',
+      secure: config.production,
+      httpOnly: true,
+      sameSite: 'lax',
+    });
+    return { ok: true };
+  });
   app.get('/v1/bootstrap', { preHandler: authenticate }, async (req) => bootstrap(req.user));
   app.post('/v1/auth/logout', { preHandler: authenticate }, async (req, reply) => {
     run('DELETE FROM sessions WHERE digest=?', req.sessionDigest);

@@ -24,6 +24,7 @@ export default function Pregame() {
     [reporting, setReporting] = useState(false),
     [reportText, setReportText] = useState('');
   const LINKUPS = DEMO ? SAMPLE_LINKUPS : liveEvents;
+
   const reload = async () => {
     const result = await service.api('/v1/events');
     const events = result.events.map((e: Linkup) => ({
@@ -52,6 +53,10 @@ export default function Pregame() {
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
   const working = useRef(false);
+  useEffect(() => {
+    service.setOverlayOpen(!!selected || composing);
+    return () => service.setOverlayOpen(false);
+  }, [!!selected, composing]);
   useEffect(() => {
     if (!DEMO) {
       let active = true;
@@ -198,14 +203,25 @@ export default function Pregame() {
           key={e.id}
           accessibilityRole="button"
           accessibilityLabel={`View ${e.title}`}
-          onPress={() => setSelected(e)}
+          onPress={() => {
+            setSelected(e);
+            setReporting(false);
+            setReportText('');
+            setError('');
+          }}
           style={s.card}
         >
           <View style={s.sectionRow}>
             <Text style={s.category}>{e.category.toUpperCase()}</Text>
             <Icon name={e.kind === 'invite' ? 'users' : 'spark'} size={19} />
           </View>
-          {e.kind === 'invite' && <Text style={s.invited}>{e.host} invited you</Text>}
+          {e.kind === 'invite' && (
+            <Text style={s.invited}>
+              {e.hostId === service.snapshot?.userId
+                ? 'Your private linkup'
+                : `${e.host} invited you`}
+            </Text>
+          )}
           <Text style={s.cardTitle}>{e.title}</Text>
           <Text style={s.meta}>{e.time}</Text>
           <View style={s.location}>

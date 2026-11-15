@@ -299,8 +299,8 @@ function Quad() {
     <SafeAreaView edges={['top', 'bottom']} style={styles.root}>
       <View
         style={styles.frame}
-        importantForAccessibility={dialog ? 'no-hide-descendants' : 'auto'}
-        aria-hidden={dialog !== null}
+        importantForAccessibility={dialog || service.overlayOpen ? 'no-hide-descendants' : 'auto'}
+        aria-hidden={dialog !== null || service.overlayOpen}
       >
         <View style={styles.header}>
           <Pressable

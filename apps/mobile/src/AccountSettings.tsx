@@ -71,8 +71,11 @@ export default function AccountSettings() {
       >
         Export my data
       </Button>
-      <Button secondary disabled={busy} onPress={() => void act(service.logout)}>
+      <Button secondary disabled={busy} onPress={() => void act(() => service.logout())}>
         Sign out
+      </Button>
+      <Button secondary disabled={busy} onPress={() => void act(() => service.logout(true))}>
+        Sign out all devices
       </Button>
       <Button danger disabled={busy} onPress={() => setDeleting(!deleting)}>
         Delete account

@@ -68,6 +68,8 @@ export async function backupOffsite(db, config) {
     await encryptFile(plain, encrypted, config.backup.key);
     const client = new S3Client({
       region: config.backup.region,
+      maxAttempts: 2,
+      requestHandler: { connectionTimeout: 5000, requestTimeout: 15000 },
       endpoint: config.backup.endpoint || undefined,
       credentials: {
         accessKeyId: config.backup.accessKey,
@@ -124,7 +126,8 @@ export function startBackups(store, config, log) {
   if (!config.backup.bucket)
     return { stop: () => {}, status: () => ({ configured: false, lastSuccess: null }) };
   let active = false,
-    lastSuccess = null;
+    lastSuccess = null,
+    pending = Promise.resolve();
   const run = async () => {
     if (active) return;
     active = true;
@@ -138,14 +141,18 @@ export function startBackups(store, config, log) {
       active = false;
     }
   };
-  const first = setTimeout(run, 5000),
-    timer = setInterval(run, 6 * 3600000);
+  const schedule = () => {
+    pending = run();
+  };
+  const first = setTimeout(schedule, 5000),
+    timer = setInterval(schedule, 6 * 3600000);
   first.unref();
   timer.unref();
   return {
-    stop: () => {
+    stop: async () => {
       clearTimeout(first);
       clearInterval(timer);
+      await pending;
     },
     status: () => ({ configured: true, lastSuccess }),
   };

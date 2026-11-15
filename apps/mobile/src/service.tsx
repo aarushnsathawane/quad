@@ -34,7 +34,9 @@ type Service = {
   api: <T = any>(path: string, method?: string, body?: unknown) => Promise<T>;
   refresh: () => Promise<Bootstrap>;
   commit: (before: State, after: State) => Promise<Bootstrap>;
-  logout: () => Promise<void>;
+  logout: (all?: boolean) => Promise<void>;
+  overlayOpen: boolean;
+  setOverlayOpen: (open: boolean) => void;
 };
 const Context = createContext<Service | null>(null);
 export function useService() {
@@ -93,26 +95,38 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
     [loading, setLoading] = useState(!DEMO),
     [error, setError] = useState(''),
     [offline, setOffline] = useState(false),
-    [resuming, setResuming] = useState(false);
+    [resuming, setResuming] = useState(false),
+    [overlayOpen, setOverlayOpen] = useState(false);
   const mounted = useRef(true),
     refreshing = useRef(false),
     busy = useRef(false),
-    sessionEpoch = useRef(0);
+    sessionEpoch = useRef(0),
+    requestSequence = useRef(0);
   const refresh = async () => {
-    const epoch = sessionEpoch.current;
+    const epoch = sessionEpoch.current,
+      sequence = ++requestSequence.current;
     try {
       const next = await request<Bootstrap>('/v1/bootstrap');
-      if (mounted.current && epoch === sessionEpoch.current) {
+      if (
+        mounted.current &&
+        epoch === sessionEpoch.current &&
+        sequence === requestSequence.current
+      ) {
         setSnapshot(next);
         setOffline(false);
       }
       return next;
     } catch (e) {
-      if (epoch === sessionEpoch.current && (e as any).status === 401) {
+      if (
+        epoch === sessionEpoch.current &&
+        sequence === requestSequence.current &&
+        (e as any).status === 401
+      ) {
         nativeToken = null;
         setSnapshot(null);
         if (Platform.OS !== 'web') await SecureStore.deleteItemAsync(SESSION_KEY);
-      } else if (epoch === sessionEpoch.current) setOffline(true);
+      } else if (epoch === sessionEpoch.current && sequence === requestSequence.current)
+        setOffline(true);
       throw e;
     }
   };
@@ -140,8 +154,8 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
       mounted.current = false;
     };
   }, []);
-  const logout = async () => {
-    await request('/v1/auth/logout', 'POST', {});
+  const logout = async (all = false) => {
+    await request(all ? '/v1/auth/logout-all' : '/v1/auth/logout', 'POST', {});
     sessionEpoch.current++;
     nativeToken = null;
     if (Platform.OS !== 'web') await SecureStore.deleteItemAsync(SESSION_KEY);
@@ -162,7 +176,7 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
     };
     const timer = setInterval(poll, 10000);
     const subscription = AppState.addEventListener('change', (s) => {
-      if (s === 'active') {
+      if (s === 'active' && !busy.current) {
         setResuming(true);
         void poll().finally(() => setResuming(false));
       }
@@ -251,6 +265,8 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
     }
   };
   const value: Service = {
+    overlayOpen,
+    setOverlayOpen,
     online: !offline,
     snapshot,
     config,
