@@ -47,7 +47,7 @@ Native production tokens use SecureStore. Browser sessions use secure HTTP-only 
 
 ## Backups and recovery
 
-The backend snapshots SQLite using the online backup API, encrypts it with AES-256-GCM and uploads under `quad/` every six hours. It prunes its own encrypted snapshots after 30 days. The production bucket must remain private. Logs record success/failure without credentials or account content. Alert on failed backups and on `/readyz` showing a last success older than 24 hours. A Render disk snapshot is not a substitute for the database backup/restore procedure.
+The backend snapshots SQLite using the online backup API, removes location cells, sessions and login challenges from the snapshot, encrypts it with AES-256-GCM and uploads under `quad/` every six hours. It prunes its own encrypted snapshots after 30 days. The production bucket must remain private. Logs record success/failure without credentials or account content. Alert on failed backups and on `/readyz` showing a last success older than 24 hours. A Render disk snapshot is not a substitute for the database backup/restore procedure.
 
 Recovery drill:
 
@@ -55,7 +55,7 @@ Recovery drill:
 2. On a trusted machine with Node and the repo dependencies, provide `BACKUP_KEY` through a secure environment and run:
    `node scripts/restore-backup.mjs downloaded.sqlite.enc NEW-DATABASE.sqlite`
 3. The script refuses an existing target and verifies authentication and SQLite integrity. Keep the old database and its WAL files together for rollback. Point `QUAD_DB` to the restored file on the persistent disk, ensure ownership, then restart.
-4. Validate profiles/connections/messages/events and optionally revoke all sessions with `DELETE FROM sessions` during an offline maintenance session. Recovery can restore records deleted after the snapshot: reconcile post-snapshot deletion requests before reopening. Backups can include a deleted account until retention expires.
+4. Validate profiles/connections/messages/events. Snapshots exclude sessions and login challenges, so every user must sign in again after restoration. Recovery can restore records deleted after the snapshot: reconcile post-snapshot deletion requests before reopening. Backups can include a deleted account until retention expires.
 5. Remove plaintext recovery copies from unencrypted temporary storage after validation. Keep a dated recovery-drill record outside the bucket.
 
 ## Operations and rollback
