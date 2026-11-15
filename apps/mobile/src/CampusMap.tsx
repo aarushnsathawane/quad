@@ -8,6 +8,8 @@ import { useTheme } from './theme';
 import { CAMPUSES, campusFor, type CampusId } from './campuses';
 import MapControls from './MapControls';
 import { groupsFor, groupSummary, ungroupedPeople } from './gatherings';
+import { clusterPeople } from './map-clusters';
+import type { Person } from './model';
 import type { MapProps } from './map-types';
 const bounds: L.LatLngBoundsExpression = [
   [40.475, -74.478],
@@ -87,6 +89,7 @@ export default function CampusMap({ people, selected, onSelect, onGathering }: M
       count: number | null,
       action: () => void,
       tip?: string,
+      choices?: Person[],
     ) => {
       const button = document.createElement('button');
       button.type = 'button';
@@ -132,7 +135,7 @@ export default function CampusMap({ people, selected, onSelect, onGathering }: M
         button.append(badge);
       }
       L.DomEvent.disableClickPropagation(button);
-      button.addEventListener('click', action);
+      button.addEventListener('click', () => (choices ? marker.openPopup() : action()));
       const marker = L.marker([position.lat, position.lng], {
         icon: L.divIcon({
           html: button,
@@ -149,6 +152,23 @@ export default function CampusMap({ people, selected, onSelect, onGathering }: M
         whiteSpace: 'normal',
         lineHeight: '1.5',
       });
+      if (choices) {
+        const menu = document.createElement('div');
+        menu.style.cssText = `background:${C.surface};color:${C.ink};padding:8px;border-radius:10px;min-width:160px`;
+        for (const person of choices) {
+          const entry = document.createElement('button');
+          entry.type = 'button';
+          entry.textContent = person.firstName + ' ' + person.lastName;
+          entry.setAttribute('aria-label', `View ${person.firstName}'s profile`);
+          entry.style.cssText = `display:block;width:100%;padding:10px;border:0;background:${C.surface};color:${C.ink};text-align:left;cursor:pointer`;
+          entry.addEventListener('click', () => {
+            marker.closePopup();
+            callbacks.current.onSelect(person.id);
+          });
+          menu.append(entry);
+        }
+        marker.bindPopup(menu, { maxHeight: 210 });
+      }
       marker.bindTooltip(tooltip, { direction: 'top', offset: [0, -16] });
       button.addEventListener('focus', () => marker.openTooltip());
       button.addEventListener('blur', () => marker.closeTooltip());
@@ -173,11 +193,30 @@ export default function CampusMap({ people, selected, onSelect, onGathering }: M
       });
     } else {
       const groups = groupsFor(people);
-      ungroupedPeople(people, groups).forEach((p) =>
-        pin(p.position, `View ${p.firstName}'s profile`, p.avatar, null, () =>
-          callbacks.current.onSelect(p.id),
-        ),
-      );
+      clusterPeople(ungroupedPeople(people, groups)).forEach((cell) => {
+        const person = cell.members[0],
+          many = cell.members.length > 1;
+        pin(
+          cell.position,
+          many
+            ? `${cell.members.length} students around ${campusFor(cell.position).name}`
+            : `View ${person.firstName}'s profile`,
+          person.avatar,
+          many ? cell.members.length : null,
+          () => callbacks.current.onSelect(person.id),
+          many
+            ? cell.members
+                .slice(0, 2)
+                .map((p) => p.firstName)
+                .join(', ') +
+                (cell.members.length > 2
+                  ? ` and ${cell.members.length - 2} others nearby`
+                  : ' are nearby') +
+                ' · Approximate location'
+            : undefined,
+          many ? cell.members : undefined,
+        );
+      });
       groups.forEach((g) =>
         pin(
           g.position,

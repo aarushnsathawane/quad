@@ -34,3 +34,25 @@ test('online backups restore consistently and reject wrong keys or tampering', a
     decryptFile(join(dir, 'tampered.enc'), join(dir, 'tampered.sqlite'), secret),
   );
 });
+
+test('production snapshots exclude location cells and login sessions while preserving account data', async (t) => {
+  const { openDatabase } = await import('../database.mjs');
+  const { snapshotDatabase } = await import('../backup.mjs');
+  const dir = await mkdtemp(join(tmpdir(), 'quad-scrub-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const store = openDatabase(':memory:');
+  t.after(() => store.db.close());
+  store.run("INSERT INTO users VALUES ('test','test@rutgers.edu',1,'{}',1,'active',1,1,'v1')");
+  store.run("INSERT INTO visibility VALUES ('test','university',NULL,40.5015,-74.45,1)");
+  store.run("INSERT INTO sessions VALUES ('secret-digest','test',100,1)");
+  store.run("INSERT INTO login_codes VALUES ('test@rutgers.edu','nonce','digest',100,1,0)");
+  const path = join(dir, 'snapshot.sqlite');
+  await snapshotDatabase(store.db, path);
+  const copy = new DatabaseSync(path);
+  t.after(() => copy.close());
+  assert.equal(copy.prepare('SELECT COUNT(*) n FROM users').get().n, 1);
+  assert.equal(copy.prepare('SELECT lat FROM visibility').get().lat, null);
+  assert.equal(copy.prepare('SELECT COUNT(*) n FROM sessions').get().n, 0);
+  assert.equal(copy.prepare('SELECT COUNT(*) n FROM login_codes').get().n, 0);
+  assert.equal(store.get('SELECT lat FROM visibility').lat, 40.5015);
+});

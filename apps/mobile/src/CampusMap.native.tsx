@@ -1,6 +1,6 @@
 import { DEMO } from './service';
 import { useRef, useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import MapControls from './MapControls';
 import { CAMPUSES, campusFor, type CampusId } from './campuses';
@@ -8,6 +8,7 @@ import { CAMPUS } from './data';
 import { useTheme, useThemedStyles, type Palette } from './theme';
 import { Icon, Avatar } from './ui';
 import { groupsFor, ungroupedPeople } from './gatherings';
+import { clusterPeople } from './map-clusters';
 import type { MapProps } from './map-types';
 export default function CampusMap({ people, selected, onSelect, onGathering }: MapProps) {
   const C = useTheme().colors;
@@ -18,6 +19,8 @@ export default function CampusMap({ people, selected, onSelect, onGathering }: M
   const groups = groupsFor(people);
   const [active, setActive] = useState<CampusId | 'all'>('all');
   const [overview, setOverview] = useState(true);
+  const [activeIds, setActiveIds] = useState<string[]>([]);
+  const activeMembers = people.filter((p) => activeIds.includes(p.id));
   const go = (id: CampusId | 'all') => {
     setActive(id);
     const c = CAMPUSES.find((c) => c.id === id);
@@ -97,31 +100,54 @@ export default function CampusMap({ people, selected, onSelect, onGathering }: M
             ) : null;
           })}
         {!overview &&
-          ungroupedPeople(people, groups).map((p) => (
-            <Marker
-              key={p.id}
-              coordinate={{
-                latitude: p.position.lat,
-                longitude: p.position.lng,
-              }}
-              title={`${p.firstName} ${p.lastName}`}
-              description={p.major}
-              onPress={() => onSelect(p.id)}
-              tracksViewChanges={true}
-            >
-              <View
-                style={[
-                  styles.pin,
-                  selected === p.id && {
-                    borderColor: C.primary,
-                    backgroundColor: C.soft,
-                  },
-                ]}
+          clusterPeople(ungroupedPeople(people, groups)).map((cell) => {
+            const p = cell.members[0];
+            return (
+              <Marker
+                key={p.id}
+                coordinate={{
+                  latitude: p.position.lat,
+                  longitude: p.position.lng,
+                }}
+                title={`${p.firstName} ${p.lastName}`}
+                description={p.major}
+                onPress={() =>
+                  cell.members.length > 1
+                    ? setActiveIds(cell.members.map((p) => p.id))
+                    : onSelect(p.id)
+                }
+                tracksViewChanges={true}
               >
-                <Avatar person={p} size={28} />
-              </View>
-            </Marker>
-          ))}
+                <View
+                  style={[
+                    styles.pin,
+                    cell.members.length > 1 && { width: 54, flexDirection: 'row' },
+                    selected === p.id && {
+                      borderColor: C.primary,
+                      backgroundColor: C.soft,
+                    },
+                  ]}
+                >
+                  <Avatar person={p} size={28} />
+                  {cell.members.length > 1 && (
+                    <Text
+                      style={{
+                        marginLeft: 2,
+                        color: C.onPrimary,
+                        backgroundColor: C.primary,
+                        paddingHorizontal: 4,
+                        borderRadius: 8,
+                        fontSize: 10,
+                        fontWeight: '700',
+                      }}
+                    >
+                      {cell.members.length}
+                    </Text>
+                  )}
+                </View>
+              </Marker>
+            );
+          })}
         {!overview &&
           groups.map((g) => (
             <Marker
@@ -176,6 +202,51 @@ export default function CampusMap({ people, selected, onSelect, onGathering }: M
             </Marker>
           ))}
       </MapView>
+      {!!activeMembers.length && (
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 35,
+            left: 15,
+            right: 15,
+            backgroundColor: C.surface,
+            borderRadius: 14,
+            padding: 12,
+            maxHeight: 210,
+          }}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text style={{ color: C.ink, fontWeight: '700' }}>
+              Around this spot · {activeMembers.length}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close students at this spot"
+              onPress={() => setActiveIds([])}
+            >
+              <Icon name="close" />
+            </Pressable>
+          </View>
+          <ScrollView>
+            {activeMembers.map((p) => (
+              <Pressable
+                key={p.id}
+                accessibilityRole="button"
+                accessibilityLabel={`View ${p.firstName}'s profile`}
+                onPress={() => {
+                  setActiveIds([]);
+                  onSelect(p.id);
+                }}
+                style={{ padding: 10 }}
+              >
+                <Text style={{ color: C.ink }}>
+                  {p.firstName} {p.lastName}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      )}
       <MapControls active={active} onChange={go} />
       <Pressable
         accessibilityRole="button"

@@ -59,12 +59,23 @@ export async function decryptFile(source, target, secret) {
     db.close();
   }
 }
+export async function snapshotDatabase(db, target) {
+  await backup(db, target);
+  const snapshot = new DatabaseSync(target);
+  try {
+    snapshot.exec(
+      'PRAGMA journal_mode=DELETE; PRAGMA secure_delete=ON; BEGIN IMMEDIATE; UPDATE visibility SET lat=NULL,lng=NULL,updated_at=NULL; DELETE FROM sessions; DELETE FROM login_codes; COMMIT; VACUUM;',
+    );
+  } finally {
+    snapshot.close();
+  }
+}
 export async function backupOffsite(db, config) {
   const directory = await mkdtemp(join(tmpdir(), 'quad-backup-'));
   try {
     const plain = join(directory, 'snapshot.sqlite'),
       encrypted = join(directory, 'snapshot.enc');
-    await backup(db, plain);
+    await snapshotDatabase(db, plain);
     await encryptFile(plain, encrypted, config.backup.key);
     const client = new S3Client({
       region: config.backup.region,
