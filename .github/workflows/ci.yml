@@ -1,0 +1,67 @@
+name: Quad production checks
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: quad-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/mobile/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix apps/mobile
+      - run: npm run check
+      - name: Export native JavaScript
+        working-directory: apps/mobile
+        run: npx expo export --platform ios --platform android --output-dir dist-native
+      - run: npm audit --audit-level=moderate
+      - run: npm audit --prefix apps/mobile --audit-level=moderate
+      - name: Verify native module dependency compatibility
+        working-directory: apps/mobile
+        run: npx expo install --check
+  container:
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker build --target runtime -t quad:ci .
+      - name: Production image smoke check
+        run: |
+          docker run -d --name quad-ci -p 127.0.0.1:18080:8080 \
+            -e APP_ORIGIN=https://quad.example \
+            -e AUTH_SECRET=ci-only-random-placeholder-at-least-32-characters \
+            -e SMTP_HOST=127.0.0.1 -e SMTP_USER=ci -e SMTP_PASSWORD=ci \
+            -e MAIL_FROM=ci@example.test -e SUPPORT_EMAIL=ci@example.test \
+            -e ADMIN_EMAILS=ci@rutgers.edu \
+            -e MAP_TILE_URL='https://tile.openstreetmap.org/{z}/{x}/{y}.png' \
+            -e MAP_ATTRIBUTION='OpenStreetMap contributors' \
+            -e BACKUP_BUCKET=ci -e BACKUP_ENDPOINT=http://127.0.0.1:9 \
+            -e BACKUP_ACCESS_KEY=ci -e BACKUP_SECRET_KEY=ci \
+            -e BACKUP_KEY=ci-only-backup-encryption-placeholder-32-chars \
+            quad:ci
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18080/healthz; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:18080/healthz
+          curl -fsS -H 'Accept: text/html' http://127.0.0.1:18080/ > /tmp/quad.html
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/v1/bootstrap)" = 401
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -d '{}' http://127.0.0.1:18080/api/demo/login)" = 404
+      - if: always()
+        run: docker logs quad-ci; docker rm -f -v quad-ci

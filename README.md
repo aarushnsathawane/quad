@@ -1,114 +1,75 @@
 # Quad
 
-**Your campus. Your people.** A map-first campus social discovery app.
+Rutgers campus discovery, connections, chats, and **Pregame by Quad** for public linkups and private invitations. The Expo app runs on iOS, Android, and the web, with Rutgers colors and light/dark appearance.
 
-This repository contains a runnable **local MVP demo** for Rutgers University. Explore fictional students, find shared interests and organizations, edit your profile, manage connection requests, and control visibility. Data is saved in SQLite on your computer.
+## Production implementation
 
-> This is a functional prototype, not a campus-ready production service. University verification and the signed-in user are simulated. All map profiles are fictional; the illustrated campus map is not a geographic basemap. Do not deploy this demo server publicly or use it to collect real student data.
+The current app uses a shared authenticated API by default. The old fictional demo remains available only through explicit demo commands. The production server never exposes its shared demo-login endpoint, and production web builds force demo mode off.
 
-## Mobile app
+- Rutgers email-code sign-in; single-use, time-limited codes and durable revocable sessions.
+- Basic onboarding, editable profiles and illustrated avatars, interests, clubs, and experience.
+- Server-enforced campus discovery, approximate foreground presence, freshness expiry, and Ghost Mode.
+- Connection requests, accepted-connection chat with pagination and idempotent sends, bidirectional blocking.
+- Public and invite-only Pregame events, connection invitations, RSVPs, cancellation, and event reports.
+- Protected moderation queue with suspension, report review, event cancellation, and generic email alerts.
+- Account export/deletion, privacy and community-policy pages, bounded data retention.
+- Versioned SQLite migrations, persistent disk, encrypted S3-compatible offsite backups and tested restoration.
+- Same-origin production web/API, secure HTTP-only browser cookies, native SecureStore tokens, validation, origin checks, rate limits, and security headers.
 
-The React Native + Expo mobile demo now lives in [`apps/mobile`](apps/mobile/README.md). It has native iOS/Android maps, the same core discovery flows, and independent device-local saved data.
+**Code readiness does not mean a live service exists.** The operator still needs hosting, a verified email sender, backup storage, a support address and a Rutgers moderator account. Native distribution additionally needs Expo/EAS and platform signing credentials. See [deployment instructions](docs/deployment.md) for exact steps, environment values and remaining real-service checks.
+
+## Local production-style web app
+
+Node.js 22.19+ and npm are required.
+
+```sh
+npm ci
+npm ci --prefix apps/mobile
+cp .env.example .env
+# Configure an SMTP service and sender in .env before testing email sign-in.
+npm run build
+npm run dev
+```
+
+Open http://localhost:8080. `npm run dev` loads `.env`; `npm start` expects the hosting environment to supply variables. Without SMTP, sign-in fails closed rather than granting a demo identity. The real database defaults to `data/production.sqlite`, separate from all demo data.
+
+## Native app
 
 ```sh
 cd apps/mobile
 npm ci
-npm start
+# In .env, set EXPO_PUBLIC_API_URL to your deployed HTTPS API origin.
+npx expo start --go
 ```
 
-Scan Expo’s QR code with Expo Go on a phone on the same Wi-Fi. Use `npm run web` in that folder for the browser preview. See the mobile README for SDK compatibility, validation, and demo boundaries.
+For an actual release, use the EAS profiles in `apps/mobile/eas.json`. The native build validates the API URL and requires an Android maps key for Android. Browser production builds use the same origin as the API and require no client API URL. Details and outstanding store setup are in [deployment instructions](docs/deployment.md).
 
-## Run the original web app locally
-
-Requires **Node.js 22.13+** and npm. Node 22's built-in SQLite module may print an experimental warning; this is expected.
+## Explicit fictional demos
 
 ```sh
-npm ci
-npm run dev
+# Native/browser Expo demo with independent device-local data:
+npm --prefix apps/mobile run demo
+# Original legacy web demo, intentionally bound to loopback:
+npm run demo:web
 ```
 
-Open **http://localhost:5173** and click **Explore the Quad demo**. No API keys or external database are required.
+Demo accounts, fixtures, local reports and chats are not migrated into production accounts. The legacy `server/` and `src/` web prototype is retained for reference; the Docker image runs `backend/index.mjs` and serves the current Expo web app.
 
-For the optimized build:
+## Verify
 
 ```sh
-npm run build
-npm start
-```
-
-The server deliberately binds to `127.0.0.1` and accepts only local Host headers. Use `PORT=5174 npm run dev` if port 5173 is occupied. Development and production preview use the same database.
-
-## What works
-
-- Responsive Map, Connections, and Profile views.
-- Pan/zoom campus illustration, student markers, and clustering.
-- Search by name, major, interests, and organizations.
-- Filters for shared interests, shared organizations, and accepted connections.
-- Specific similarity explanations from organizations, mutuals, majors, and interests.
-- Full profiles, optional experience, and validated Instagram/LinkedIn links.
-- Profile editing with persistent interests and affiliations.
-- Send, withdraw, accept, decline, and remove connections.
-- Independent visibility audience and duration, including custom expiry.
-- Ghost Mode removes stored presence; stale and expired locations disappear.
-- Blocking removes connections and hides profiles in both directions.
-- Private local reports and an unblock list.
-- Nine integration tests covering privacy, state changes, and persistence.
-
-The seed includes two existing connections and two incoming requests so every flow can be tried. Clicking a **Connected** button offers to remove that connection. Fictional students do not automatically accept outgoing requests.
-
-## Demo boundaries
-
-- The demo login is one shared fictional identity, **Alex Chen**. It is not authentication or email verification. Session cookies are HTTP-only, same-site, and expire after 24 hours; in-memory sessions are cleared on server restart.
-- Fictional other-student positions are refreshed while the demo runs. The viewer's position is never silently refreshed.
-- Saving visibility sets a fictional campus position. The UI never asks for or captures device GPS. An internal location endpoint exists for later integration, but is not a complete tracking system.
-- Presence expires after 15 minutes without an update, even when sharing is set to Always. Save visibility again to refresh the fictional position.
-- Discovery is limited to the sample College Avenue area, not distance from the user's actual device.
-- The map uses an original local SVG illustration. Marker positions are quantized. This simple rounding is a demo approximation, not a complete defense against location inference.
-- Profiles have illustrated avatars. Photo uploads, minor selection, separate hobby categorization, classes, and Close Friends are deferred.
-- Reports are saved locally; there is no moderation dashboard, alerting, or staffed reviewer.
-- Campus data and catalogs are seed fixtures, not authoritative university records.
-- The app polls every 15 seconds. Production realtime revocation, permission changes, and browser background handling still need work.
-- Fonts optionally load from Google Fonts with local system fallbacks. Avatars and maps require no external image services.
-
-## Architecture
-
-| Layer | Choice |
-| --- | --- |
-| UI | React + TypeScript |
-| Map interaction | Leaflet + local campus SVG |
-| Icons | Small local SVG components |
-| Development/build | Vite |
-| API | Node.js HTTP server |
-| Storage | Node.js built-in SQLite |
-| Tests | Node.js test runner |
-
-The API and frontend use the same origin. No database or raw-coordinate access is exposed to the browser. Account records, profiles, and current location are separate tables. See [the data model](docs/data-model.md) and [schema](server/schema.sql).
-
-```text
-src/             React app, map, styles, API types
-server/          API, database, seed data, server
-public/          Local map illustration and student avatars
-tests/           API and persistence integration tests
-docs/            Data model and campus-launch checklist
-```
-
-## Verification
-
-```sh
-npm test
-npm run build
-# Or both:
 npm run check
+npm --prefix apps/mobile run export:production
+npm audit --audit-level=moderate
+npm audit --prefix apps/mobile --audit-level=moderate
 ```
 
-Tests use isolated databases and ephemeral loopback ports. They do not edit your demo database.
+`npm run check` runs backend security/data tests, legacy regressions, mobile logic tests, TypeScript checks and the production web build. CI also exports native JavaScript and builds/smokes the production Docker image. JavaScript exports are not signed native app binaries or real-device tests.
 
-## Local data and GitHub
+## Architecture and limits
 
-The database is created at `data/quad.sqlite`, which is ignored by Git. To start fresh, stop the server, move the `data` directory aside, and start again. `QUAD_DB` can point to another SQLite file. A `.env.example` documents supported variables; this server reads actual environment variables, not `.env` files automatically.
+One Node/Fastify service serves the web app and API. SQLite uses WAL, foreign keys, transactions and versioned migrations. It is a deliberate single-instance campus-pilot design: use a persistent disk, never an ephemeral/serverless filesystem or multiple replicas. Move to managed PostgreSQL before horizontal scaling. Discovery returns at most 500 eligible profiles; accounts support up to 500 relationships. Polling updates profiles/events every 10 seconds and an open chat every 5 seconds; it is not a background tracking service. Only latest coarse presence is stored, not raw GPS or location history.
 
-Source and the dependency lockfile belong in GitHub. Databases, sessions, build output, and secrets do not. GitHub Pages cannot run the SQLite backend; cloning and running locally is the supported preview for this version.
+Profile photos/uploads, push notifications, app-store submission, real-device validation and enrollment-system integration are not implemented. A verified school inbox is proof of mailbox control, not verified identity or current enrollment. The operator must review the policies, staff moderation, monitor backups, and run the real-service launch checks before inviting students.
 
-## Before a real campus launch
-
-See [production next steps](docs/production-next-steps.md). The next milestone is real authentication and verified university membership, followed by protected multi-user discovery and an actual geographic basemap.
+See [data model](docs/data-model.md), [API reference](docs/api.md), [deployment/runbook](docs/deployment.md), and [validation results](docs/readiness.md).

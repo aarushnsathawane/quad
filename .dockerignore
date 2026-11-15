@@ -1,0 +1,11 @@
+.git
+**/node_modules
+**/dist
+**/.expo
+**/.env
+**/.env.*
+data
+*.sqlite*
+*.log
+.codex
+.agents

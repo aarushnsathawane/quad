@@ -23,6 +23,9 @@
       "shortName": "Quad",
       "themeColor": "#CC0033"
     },
-    "scheme": "quad"
+    "scheme": "quad",
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }

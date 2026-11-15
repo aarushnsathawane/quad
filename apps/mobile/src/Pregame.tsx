@@ -1,4 +1,6 @@
-import { useEffect, useState, useRef } from "react";
+import { DEMO, useService } from './service';
+import EventComposer from './EventComposer';
+import { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,33 +8,82 @@ import {
   Pressable,
   StyleSheet,
   Modal,
-} from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useTheme, useThemedStyles, type Palette, serif } from "./theme";
-import { Button, Chip, Icon, Label, Empty } from "./ui";
-import { CAMPUSES, type CampusId } from "./campuses";
-import { LINKUPS, parseRSVPs, type Linkup, type RSVP } from "./pregame-data";
-const KEY = "@quad/pregame/v1";
+  TextInput,
+  AppState,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme, useThemedStyles, type Palette, serif } from './theme';
+import { Button, Chip, Icon, Label, Empty } from './ui';
+import { CAMPUSES, type CampusId } from './campuses';
+import { LINKUPS as SAMPLE_LINKUPS, parseRSVPs, type Linkup, type RSVP } from './pregame-data';
+const KEY = '@quad/pregame/v1';
 export default function Pregame() {
+  const service = useService();
+  const [liveEvents, setLiveEvents] = useState<Linkup[]>([]),
+    [composing, setComposing] = useState(false),
+    [reporting, setReporting] = useState(false),
+    [reportText, setReportText] = useState('');
+  const LINKUPS = DEMO ? SAMPLE_LINKUPS : liveEvents;
+
+  const reload = async () => {
+    const result = await service.api('/v1/events');
+    const events = result.events.map((e: Linkup) => ({
+      ...e,
+      time: e.startsAt
+        ? new Date(e.startsAt).toLocaleString([], {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+          })
+        : e.time,
+    }));
+    setLiveEvents(events);
+    setRSVPs(result.rsvps);
+    setSelected((p) => (p ? events.find((e: Linkup) => e.id === p.id) || null : null));
+  };
   const { colors: C } = useTheme(),
     s = useThemedStyles(styles);
-  const [feed, setFeed] = useState<"public" | "invite">("public"),
-    [campus, setCampus] = useState<CampusId | "all">("all"),
+  const [feed, setFeed] = useState<'public' | 'invite'>('public'),
+    [campus, setCampus] = useState<CampusId | 'all'>('all'),
     [selected, setSelected] = useState<Linkup | null>(null);
   const [rsvps, setRSVPs] = useState<Record<string, RSVP>>({}),
     [ready, setReady] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState('');
   const working = useRef(false);
   useEffect(() => {
+    service.setOverlayOpen(!!selected || composing);
+    return () => service.setOverlayOpen(false);
+  }, [!!selected, composing]);
+  useEffect(() => {
+    if (!DEMO) {
+      let active = true;
+      const refresh = async () => {
+        try {
+          await reload();
+          if (active) setReady(true);
+        } catch (e) {
+          if (active) setError(e instanceof Error ? e.message : 'Could not load linkups');
+        }
+      };
+      void refresh();
+      const timer = setInterval(() => {
+        if (AppState.currentState === 'active') void refresh();
+      }, 10000);
+      return () => {
+        active = false;
+        clearInterval(timer);
+      };
+    }
     let alive = true;
     AsyncStorage.getItem(KEY)
       .then((raw) => {
         if (alive) setRSVPs(parseRSVPs(raw));
       })
       .catch(() => {
-        if (alive)
-          setError("Saved RSVPs could not be loaded. Please try again.");
+        if (alive) setError('Saved RSVPs could not be loaded. Please try again.');
       })
       .finally(() => {
         if (alive) setReady(true);
@@ -45,28 +96,30 @@ export default function Pregame() {
     if (!ready || working.current) return;
     working.current = true;
     setBusy(true);
-    setError("");
+    setError('');
     const next = { ...rsvps };
     if (status) next[event.id] = status;
     else delete next[event.id];
     try {
-      await AsyncStorage.setItem(KEY, JSON.stringify(next));
-      setRSVPs(next);
+      if (DEMO) {
+        await AsyncStorage.setItem(KEY, JSON.stringify(next));
+        setRSVPs(next);
+      } else {
+        await service.api('/v1/events/' + event.id + '/rsvp', 'PUT', { status });
+        await reload();
+      }
     } catch {
-      setError("Could not save your RSVP. Please try again.");
+      setError('Could not save your RSVP. Please try again.');
     } finally {
       working.current = false;
       setBusy(false);
     }
   };
-  const pending = LINKUPS.filter(
-    (e) => e.kind === "invite" && !rsvps[e.id],
-  ).length;
+  const pending = LINKUPS.filter((e) => e.kind === 'invite' && !rsvps[e.id]).length;
   const events = LINKUPS.filter(
-    (e) => e.kind === feed && (campus === "all" || e.campus === campus),
+    (e) => e.kind === feed && (campus === 'all' || e.campus === campus),
   );
-  const campusName = (e: Linkup) =>
-    CAMPUSES.find((c) => c.id === e.campus)!.name;
+  const campusName = (e: Linkup) => CAMPUSES.find((c) => c.id === e.campus)!.name;
   return (
     <View style={{ gap: 18 }}>
       <View style={s.hero}>
@@ -78,8 +131,7 @@ export default function Pregame() {
         </View>
         <Text style={s.heroTitle}>Good plans.{`\n`}Better company.</Text>
         <Text style={s.heroCopy}>
-          From the first spike to the first hello. Find your people before the
-          main event.
+          From the first spike to the first hello. Find your people before the main event.
         </Text>
         <View style={s.heroBottom}>
           <Icon name="spark" color="#fff" size={17} />
@@ -87,15 +139,23 @@ export default function Pregame() {
         </View>
       </View>
       <Text style={s.demo}>
-        Sample events & invites · RSVPs stay on this device
+        {DEMO
+          ? 'Sample events & invites · RSVPs stay on this device'
+          : 'Campus plans, public linkups, and your personal invites'}
       </Text>
+      {!DEMO && (
+        <Button icon="plus" onPress={() => setComposing(true)}>
+          Create a linkup
+        </Button>
+      )}
+      {!ready && !DEMO && <Text style={s.demo}>Loading linkups…</Text>}
       <View style={s.segments}>
         {(
           [
-            { id: "public", label: "Public linkups" },
+            { id: 'public', label: 'Public linkups' },
             {
-              id: "invite",
-              label: `Your invites${pending ? " · " + pending : ""}`,
+              id: 'invite',
+              label: `Your invites${pending ? ' · ' + pending : ''}`,
             },
           ] as const
         ).map((f) => (
@@ -103,16 +163,11 @@ export default function Pregame() {
             key={f.id}
             accessibilityRole="tab"
             accessibilityState={{ selected: feed === f.id }}
-            accessibilityLabel={f.id === "invite" ? "Your invites" : f.label}
+            accessibilityLabel={f.id === 'invite' ? 'Your invites' : f.label}
             onPress={() => setFeed(f.id)}
             style={[s.segment, feed === f.id && s.segmentOn]}
           >
-            <Text
-              style={[
-                s.segmentText,
-                feed === f.id && { color: C.accent, fontWeight: "700" },
-              ]}
-            >
+            <Text style={[s.segmentText, feed === f.id && { color: C.accent, fontWeight: '700' }]}>
               {f.label}
             </Text>
           </Pressable>
@@ -123,27 +178,19 @@ export default function Pregame() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ gap: 6 }}
       >
-        <Chip selected={campus === "all"} onPress={() => setCampus("all")}>
+        <Chip selected={campus === 'all'} onPress={() => setCampus('all')}>
           All campuses
         </Chip>
         {CAMPUSES.map((c) => (
-          <Chip
-            key={c.id}
-            selected={campus === c.id}
-            onPress={() => setCampus(c.id)}
-          >
+          <Chip key={c.id} selected={campus === c.id} onPress={() => setCampus(c.id)}>
             {c.short}
           </Chip>
         ))}
       </ScrollView>
       <View style={s.sectionRow}>
-        <Label>
-          {feed === "public"
-            ? "Open invitation"
-            : "A spot with your name on it"}
-        </Label>
+        <Label>{feed === 'public' ? 'Open invitation' : 'A spot with your name on it'}</Label>
         <Text style={s.meta}>
-          {events.length} {feed === "public" ? "linkups" : "invites"}
+          {events.length} {feed === 'public' ? 'linkups' : 'invites'}
         </Text>
       </View>
       {!!error && (
@@ -156,52 +203,69 @@ export default function Pregame() {
           key={e.id}
           accessibilityRole="button"
           accessibilityLabel={`View ${e.title}`}
-          onPress={() => setSelected(e)}
+          onPress={() => {
+            setSelected(e);
+            setReporting(false);
+            setReportText('');
+            setError('');
+          }}
           style={s.card}
         >
           <View style={s.sectionRow}>
             <Text style={s.category}>{e.category.toUpperCase()}</Text>
-            <Icon name={e.kind === "invite" ? "users" : "spark"} size={19} />
+            <Icon name={e.kind === 'invite' ? 'users' : 'spark'} size={19} />
           </View>
-          {e.kind === "invite" && (
-            <Text style={s.invited}>{e.host} invited you</Text>
+          {e.kind === 'invite' && (
+            <Text style={s.invited}>
+              {e.hostId === service.snapshot?.userId
+                ? 'Your private linkup'
+                : `${e.host} invited you`}
+            </Text>
           )}
           <Text style={s.cardTitle}>{e.title}</Text>
           <Text style={s.meta}>{e.time}</Text>
           <View style={s.location}>
             <Icon name="map" size={14} />
             <Text style={s.locationText}>
-              {e.kind === "invite" ? campusName(e) : e.venue} ·{" "}
-              {e.kind === "public" ? campusName(e) : "Invite only"}
+              {e.kind === 'invite' ? campusName(e) : e.venue} ·{' '}
+              {e.kind === 'public' ? campusName(e) : 'Invite only'}
             </Text>
           </View>
           <View style={s.cardBottom}>
             <Text style={s.meta}>
-              {e.going + (rsvps[e.id] === "going" ? 1 : 0)} going ·{" "}
-              {e.kind === "public"
-                ? `Hosted by ${e.host}`
-                : "Friends of the host"}
+              {e.going + (DEMO && rsvps[e.id] === 'going' ? 1 : 0)} going ·{' '}
+              {e.kind === 'public' ? `Hosted by ${e.host}` : 'Friends of the host'}
             </Text>
             <Text style={s.action}>
-              {rsvps[e.id] === "going"
-                ? "✓ You’re going"
-                : rsvps[e.id] === "declined"
-                  ? "Declined · View"
-                  : e.kind === "invite"
-                    ? "Respond →"
-                    : "See linkup →"}
+              {rsvps[e.id] === 'going'
+                ? '✓ You’re going'
+                : rsvps[e.id] === 'declined'
+                  ? 'Declined · View'
+                  : e.kind === 'invite'
+                    ? 'Respond →'
+                    : 'See linkup →'}
             </Text>
           </View>
         </Pressable>
       ))}
       {!events.length && (
         <Empty title="No plans here yet">
-          Try another campus to see more sample linkups.
+          {DEMO
+            ? 'Try another campus to see more sample linkups.'
+            : 'Try another campus, or create the first linkup.'}
         </Empty>
       )}
-      <Text style={s.foot}>
-        A little less “what’s the move?” A little more showing up.
-      </Text>
+      <Text style={s.foot}>A little less “what’s the move?” A little more showing up.</Text>
+      {!DEMO && (
+        <EventComposer
+          visible={composing}
+          onClose={() => setComposing(false)}
+          onCreated={async () => {
+            setComposing(false);
+            await reload();
+          }}
+        />
+      )}
       <Modal
         visible={!!selected}
         transparent
@@ -214,15 +278,13 @@ export default function Pregame() {
           <View
             accessibilityViewIsModal
             role="dialog"
-            aria-label={selected?.title || "Linkup details"}
+            aria-label={selected?.title || 'Linkup details'}
             aria-modal={true}
             style={s.sheet}
           >
             <View style={s.sectionRow}>
               <Label>
-                {selected?.kind === "invite"
-                  ? "Your personal invite"
-                  : "Public linkup"}
+                {selected?.kind === 'invite' ? 'Your personal invite' : 'Public linkup'}
               </Label>
               <Pressable
                 accessibilityRole="button"
@@ -238,28 +300,26 @@ export default function Pregame() {
               <ScrollView contentContainerStyle={{ gap: 18 }}>
                 <Text style={s.heroTitleDark}>{selected.title}</Text>
                 <Text style={s.invited}>
-                  {selected.kind === "invite"
+                  {selected.kind === 'invite'
                     ? `${selected.host} invited you`
                     : `Hosted by ${selected.host}`}
                 </Text>
                 <Text style={s.locationText}>
                   {selected.time}
-                  {"\n"}
+                  {'\n'}
                   {selected.venue}
-                  {"\n"}
+                  {'\n'}
                   {campusName(selected)}
                 </Text>
                 <Text style={s.description}>{selected.description}</Text>
                 <Text style={s.meta}>
-                  {selected.going + (rsvps[selected.id] === "going" ? 1 : 0)}{" "}
-                  going ·{" "}
-                  {selected.kind === "invite"
-                    ? "Invite only"
-                    : "Open to the campus community"}
+                  {selected.going + (DEMO && rsvps[selected.id] === 'going' ? 1 : 0)} going ·{' '}
+                  {selected.kind === 'invite' ? 'Invite only' : 'Open to the campus community'}
                 </Text>
                 <Text style={s.demo}>
-                  This is a sample event. Your response is saved locally; no
-                  host is notified.
+                  {DEMO
+                    ? 'This is a sample event. Your response is saved locally; no host is notified.'
+                    : 'Your RSVP is visible to the event service. Only invitees and the host can access private linkups.'}
                 </Text>
                 {!!error && (
                   <Text accessibilityRole="alert" style={s.error}>
@@ -269,37 +329,102 @@ export default function Pregame() {
                 <Button
                   loading={busy}
                   disabled={!ready}
-                  onPress={() =>
-                    respond(
-                      selected,
-                      rsvps[selected.id] === "going" ? null : "going",
-                    )
-                  }
-                  icon={rsvps[selected.id] === "going" ? "check" : "plus"}
+                  onPress={() => respond(selected, rsvps[selected.id] === 'going' ? null : 'going')}
+                  icon={rsvps[selected.id] === 'going' ? 'check' : 'plus'}
                 >
-                  {rsvps[selected.id] === "going"
-                    ? "You’re going · Undo RSVP"
-                    : selected.kind === "invite"
-                      ? "Accept invite"
-                      : "Join linkup"}
+                  {rsvps[selected.id] === 'going'
+                    ? 'You’re going · Undo RSVP'
+                    : selected.kind === 'invite'
+                      ? 'Accept invite'
+                      : 'Join linkup'}
                 </Button>
-                {selected.kind === "invite" &&
-                  rsvps[selected.id] !== "going" && (
+                {!DEMO && selected.hostId === service.snapshot?.userId && (
+                  <Button
+                    danger
+                    disabled={busy}
+                    onPress={async () => {
+                      setBusy(true);
+                      try {
+                        await service.api('/v1/events/' + selected.id, 'DELETE', {});
+                        setSelected(null);
+                        await reload();
+                      } catch (e) {
+                        setError(e instanceof Error ? e.message : 'Could not cancel');
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    Cancel this linkup
+                  </Button>
+                )}
+                {!DEMO && selected.hostId !== service.snapshot?.userId && (
+                  <>
                     <Button
                       secondary
-                      disabled={busy || !ready}
-                      onPress={() =>
-                        respond(
-                          selected,
-                          rsvps[selected.id] === "declined" ? null : "declined",
-                        )
-                      }
+                      disabled={busy}
+                      onPress={() => {
+                        setReporting(!reporting);
+                        setReportText('');
+                      }}
                     >
-                      {rsvps[selected.id] === "declined"
-                        ? "Undo decline"
-                        : "Decline invite"}
+                      Report this linkup
                     </Button>
-                  )}
+                    {reporting && (
+                      <>
+                        <TextInput
+                          accessibilityLabel="Event report details"
+                          placeholder="What should the moderation team know?"
+                          placeholderTextColor={C.muted}
+                          multiline
+                          maxLength={1000}
+                          value={reportText}
+                          onChangeText={setReportText}
+                          style={{
+                            color: C.ink,
+                            borderWidth: 1,
+                            borderColor: C.line,
+                            padding: 12,
+                            borderRadius: 10,
+                          }}
+                        />
+                        <Button
+                          disabled={busy || !reportText.trim()}
+                          onPress={async () => {
+                            setBusy(true);
+                            try {
+                              await service.api('/v1/reports', 'POST', {
+                                eventId: selected.id,
+                                reason: 'Event safety concern',
+                                details: reportText,
+                              });
+                              setReporting(false);
+                              setReportText('');
+                              setSelected(null);
+                            } catch (e) {
+                              setError(e instanceof Error ? e.message : 'Could not report');
+                            } finally {
+                              setBusy(false);
+                            }
+                          }}
+                        >
+                          Send report
+                        </Button>
+                      </>
+                    )}
+                  </>
+                )}
+                {selected.kind === 'invite' && rsvps[selected.id] !== 'going' && (
+                  <Button
+                    secondary
+                    disabled={busy || !ready}
+                    onPress={() =>
+                      respond(selected, rsvps[selected.id] === 'declined' ? null : 'declined')
+                    }
+                  >
+                    {rsvps[selected.id] === 'declined' ? 'Undo decline' : 'Decline invite'}
+                  </Button>
+                )}
               </ScrollView>
             )}
           </View>
@@ -315,53 +440,53 @@ const styles = (C: Palette) =>
       borderRadius: 22,
       padding: 24,
       gap: 17,
-      overflow: "hidden",
+      overflow: 'hidden',
     },
-    topRow: { flexDirection: "row", alignItems: "center", gap: 9 },
+    topRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
     ribbon: {
-      backgroundColor: "#fff",
+      backgroundColor: '#fff',
       paddingHorizontal: 9,
       paddingVertical: 4,
       borderRadius: 4,
-      transform: [{ rotate: "-5deg" }],
+      transform: [{ rotate: '-5deg' }],
     },
     ribbonText: {
       fontSize: 10,
       letterSpacing: 1,
-      fontWeight: "800",
+      fontWeight: '800',
       color: C.primary,
     },
-    kicker: { fontSize: 8, letterSpacing: 1.5, color: "#ffe0e8", flex: 1 },
+    kicker: { fontSize: 8, letterSpacing: 1.5, color: '#ffe0e8', flex: 1 },
     heroTitle: {
       fontFamily: serif,
       fontSize: 36,
       lineHeight: 40,
-      color: "#fff",
+      color: '#fff',
     },
-    heroCopy: { fontSize: 12, lineHeight: 20, color: "#ffe0e8" },
+    heroCopy: { fontSize: 12, lineHeight: 20, color: '#ffe0e8' },
     heroBottom: {
-      flexDirection: "row",
+      flexDirection: 'row',
       gap: 8,
-      alignItems: "center",
+      alignItems: 'center',
       paddingTop: 8,
       borderTopWidth: 1,
-      borderColor: "#ffffff44",
+      borderColor: '#ffffff44',
     },
-    heroNote: { fontSize: 10, color: "#fff" },
+    heroNote: { fontSize: 10, color: '#fff' },
     demo: { fontSize: 10, color: C.muted, lineHeight: 17 },
     segments: {
-      flexDirection: "row",
+      flexDirection: 'row',
       backgroundColor: C.soft,
       borderRadius: 12,
       padding: 4,
     },
-    segment: { flex: 1, padding: 12, alignItems: "center", borderRadius: 9 },
+    segment: { flex: 1, padding: 12, alignItems: 'center', borderRadius: 9 },
     segmentOn: { backgroundColor: C.surface },
     segmentText: { fontSize: 12, color: C.muted },
     sectionRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       gap: 10,
     },
     meta: { fontSize: 10, color: C.muted, lineHeight: 17 },
@@ -376,28 +501,28 @@ const styles = (C: Palette) =>
     },
     category: {
       fontSize: 9,
-      fontWeight: "700",
+      fontWeight: '700',
       letterSpacing: 1,
       color: C.accent,
     },
-    invited: { fontSize: 12, color: C.accent, fontWeight: "600" },
+    invited: { fontSize: 12, color: C.accent, fontWeight: '600' },
     cardTitle: { fontFamily: serif, fontSize: 25, color: C.ink },
-    location: { flexDirection: "row", gap: 6, alignItems: "center" },
+    location: { flexDirection: 'row', gap: 6, alignItems: 'center' },
     locationText: { fontSize: 11, color: C.ink, lineHeight: 20, flexShrink: 1 },
     cardBottom: {
       borderTopWidth: 1,
       borderColor: C.line,
       paddingTop: 12,
-      flexDirection: "row",
-      justifyContent: "space-between",
-      flexWrap: "wrap",
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      flexWrap: 'wrap',
       gap: 8,
     },
-    action: { color: C.accent, fontWeight: "600", fontSize: 11 },
+    action: { color: C.accent, fontWeight: '600', fontSize: 11 },
     foot: {
-      textAlign: "center",
+      textAlign: 'center',
       fontFamily: serif,
-      fontStyle: "italic",
+      fontStyle: 'italic',
       color: C.muted,
       fontSize: 13,
       paddingVertical: 16,
@@ -405,13 +530,13 @@ const styles = (C: Palette) =>
     backdrop: {
       flex: 1,
       backgroundColor: C.overlay,
-      justifyContent: "flex-end",
-      alignItems: "center",
+      justifyContent: 'flex-end',
+      alignItems: 'center',
     },
     sheet: {
-      width: "100%",
+      width: '100%',
       maxWidth: 520,
-      maxHeight: "85%",
+      maxHeight: '85%',
       backgroundColor: C.surface,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
